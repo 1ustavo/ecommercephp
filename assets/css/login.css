@@ -1,0 +1,193 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa, #dfe9f3);
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-area {
+    text-align: center;
+    padding: 40px 20px 20px;
+}
+
+.brand-title {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.card-login {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    padding: 35px;
+    box-shadow: 0 15px 35px rgba(0,0,0,.1);
+}
+
+.card-login h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1e293b;
+}
+
+.mb-3,
+.mb-1 {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.form-control {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: .25s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37,99,235,.15);
+}
+
+.forgot-link {
+    display: block;
+    text-align: right;
+    margin-bottom: 25px;
+    text-decoration: none;
+    color: #2563eb;
+    font-size: .9rem;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    background: #fee2e2;
+    color: #b91c1c;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.btn-entrar {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .3s;
+}
+
+.btn-entrar:hover {
+    background: #1d4ed8;
+}
+
+.divider {
+    text-align: center;
+    margin: 30px 0;
+    color: #64748b;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    position: absolute;
+    width: 35%;
+    height: 1px;
+    background: #d1d5db;
+    top: 50%;
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.btn-social {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px;
+    border: 1px solid #d1d5db;
+    text-decoration: none;
+    color: #374151;
+    background: white;
+    transition: .3s;
+}
+
+.btn-social:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+}
+
+.footer-icons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 10px;
+}
+
+.footer-icons a {
+    color: #475569;
+    text-decoration: none;
+    font-weight: 600;
+    transition: .3s;
+}
+
+.footer-icons a:hover {
+    color: #2563eb;
+}
+
+footer p {
+    color: #64748b;
+    font-size: .9rem;
+}
+
+@media (max-width: 500px) {
+    .card-login {
+        padding: 25px;
+    }
+
+    .brand-title {
+        font-size: 1.8rem;
+    }
+}
