@@ -15,7 +15,7 @@ $nomeUsuario = e($_SESSION["usuario_nome"] ?? "");
 <header class="site-header">
     <div class="header-inner">
         <a href="<?= pageUrl("loja.php") ?>" class="logo" aria-label="EcoShop - Página inicial">
-            <span class="logo-icon" aria-hidden="true">🛍️</span>
+            <span class="logo-icon" aria-hidden="true"></span>
             Eco<span>Shop</span>
         </a>
         <nav aria-label="Navegação principal">
@@ -23,7 +23,7 @@ $nomeUsuario = e($_SESSION["usuario_nome"] ?? "");
                 <li><a href="<?= pageUrl("loja.php") ?>">Loja</a></li>
                 <li>
                     <a href="<?= pageUrl("carrinho.php") ?>" class="nav-cart">
-                        <span class="nav-cart-icon" aria-hidden="true">🛒</span>
+                        <span class="nav-cart-icon" aria-hidden="true"></span>
                         Carrinho
                         <?php if ($cartCount > 0): ?>
                             <span class="cart-badge" aria-label="<?= $cartCount ?> itens no carrinho"><?= $cartCount ?></span>

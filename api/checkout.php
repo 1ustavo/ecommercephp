@@ -26,6 +26,7 @@ $usuarioId = (int) $_SESSION["usuario_id"];
 $enderecoId = isset($_POST["endereco_id"]) && $_POST["endereco_id"] !== "" ? (int) $_POST["endereco_id"] : null;
 $metodoFrete = trim($_POST["metodo_frete"] ?? "pac");
 $metodoPagamento = trim($_POST["metodo_pagamento"] ?? "pix");
+$codigoCupom = strtoupper(trim($_POST["cupom"] ?? ""));
 
 if ($enderecoId) {
     $endereco = Endereco::buscar($enderecoId, $usuarioId);
@@ -56,13 +57,61 @@ if ($enderecoId) {
     $enderecoId = Endereco::salvar($usuarioId, $novoEndereco);
 }
 
-$pedidoId = Pedido::criar($usuarioId, $enderecoId, $metodoFrete, $metodoPagamento);
+// Revalida o estoque de TODOS os itens do carrinho antes de prosseguir.
+// O estoque pode ter mudado entre adicionar ao carrinho e finalizar a compra.
+$itensCarrinho = Carrinho::itens();
+$itensSemEstoque = [];
+
+foreach ($itensCarrinho as $item) {
+    $variacaoId = $item["variacao_id"] ? (int) $item["variacao_id"] : null;
+    if (!Produto::estoqueDisponivel((int) $item["produto_id"], $variacaoId, (int) $item["quantidade"])) {
+        $itensSemEstoque[] = $item["nome"] . ($item["tamanho"] || $item["cor"] ? " (" . trim(($item["tamanho"] ?? "") . " " . ($item["cor"] ?? "")) . ")" : "");
+    }
+}
+
+if (!empty($itensSemEstoque)) {
+    $mensagem = "Estoque insuficiente para: " . implode(", ", $itensSemEstoque) . ". Remova ou reduza a quantidade desses itens.";
+    flash("checkout_error", $mensagem);
+    header("Location: " . pageUrl("checkout.php"));
+    exit;
+}
+
+// Calcula imposto simples sobre o subtotal (ex: 10% de ICMS)
+$subtotal = Carrinho::subtotal();
+$frete = calcularFrete($metodoFrete, $subtotal);
+$imposto = round($subtotal * 0.10, 2);
+
+// Aplica cupom se fornecido manualmente OU persistido na sessão (aplicado no carrinho)
+$cupomId = null;
+$desconto = 0;
+
+if ($codigoCupom === "" && isset($_SESSION["cupom_aplicado"])) {
+    $codigoCupom = $_SESSION["cupom_aplicado"]["codigo"] ?? "";
+}
+
+if ($codigoCupom !== "") {
+    $cupom = Cupom::buscarPorCodigo($codigoCupom);
+    if ($cupom) {
+        $desconto = Cupom::calcularDesconto($cupom, $subtotal, $frete);
+        $cupomId = (int) $cupom["id"];
+    }
+}
+
+$pedidoId = Pedido::criar($usuarioId, $enderecoId, $metodoFrete, $metodoPagamento, $desconto, $imposto, $cupomId);
 
 if (!$pedidoId) {
     flash("checkout_error", "Não foi possível processar o pedido. Verifique o carrinho e o estoque dos produtos.");
     header("Location: " . pageUrl("checkout.php"));
     exit;
 }
+
+// Registra uso do cupom se houver
+if ($cupomId) {
+    Cupom::registrarUso($cupomId);
+}
+
+// Limpa o cupom persistido na sessão após o pedido ser criado
+unset($_SESSION["cupom_aplicado"]);
 
 // Registra auditoria — quem criou o pedido, valor, método
 registrarAuditoria(

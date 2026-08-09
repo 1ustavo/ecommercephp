@@ -11,7 +11,7 @@ $tabelas = $pdo->query("
 ")->fetchAll(PDO::FETCH_COLUMN);
 
 foreach ($tabelas as $tabela) {
-    echo "  ✓ $tabela\n";
+    echo "  [OK] $tabela\n";
 }
 
 echo "\n=== COLUNAS NOVAS EM produtos ===\n";
@@ -23,7 +23,7 @@ $colunas = $pdo->query("
 ")->fetchAll(PDO::FETCH_COLUMN);
 
 foreach ($colunas as $coluna) {
-    echo "  ✓ $coluna\n";
+    echo "  [OK] $coluna\n";
 }
 
 echo "\n=== DADOS DE EXEMPLO ===\n";

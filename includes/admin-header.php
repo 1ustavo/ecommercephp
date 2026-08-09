@@ -21,6 +21,11 @@ $currentAdminPage = $currentAdminPage ?? "";
             <span class="logo-icon" aria-hidden="true"></span>
             Eco<span>Shop</span> <span class="admin-badge">Admin</span>
         </a>
+        <button type="button" class="admin-menu-toggle" id="btn-admin-menu" aria-label="Abrir menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
         <nav aria-label="Navegação administrativa">
             <ul class="nav-links">
                 <li><a href="<?= pageUrl("loja.php") ?>">Ver Loja</a></li>
@@ -30,9 +35,14 @@ $currentAdminPage = $currentAdminPage ?? "";
     </div>
 </header>
 <div class="admin-layout">
-    <aside class="admin-sidebar">
+    <div class="admin-sidebar-overlay" id="admin-sidebar-overlay"></div>
+    <aside class="admin-sidebar" id="admin-sidebar">
         <a href="<?= pageUrl("admin/dashboard.php") ?>" class="<?= $currentAdminPage === "dashboard" ? "active" : "" ?>">Dashboard</a>
         <a href="<?= pageUrl("admin/produtos.php") ?>" class="<?= $currentAdminPage === "produtos" ? "active" : "" ?>">Produtos</a>
+        <a href="<?= pageUrl("admin/categorias.php") ?>" class="<?= $currentAdminPage === "categorias" ? "active" : "" ?>">Categorias</a>
+        <a href="<?= pageUrl("admin/cupons.php") ?>" class="<?= $currentAdminPage === "cupons" ? "active" : "" ?>">Cupons</a>
+        <a href="<?= pageUrl("admin/pedidos_pendentes.php") ?>" class="<?= $currentAdminPage === "pedidos_pendentes" ? "active" : "" ?>">Pedidos Pendentes</a>
+        <a href="<?= pageUrl("admin/fila.php") ?>" class="<?= $currentAdminPage === "fila" ? "active" : "" ?>">Fila de Pedidos</a>
         <a href="<?= pageUrl("admin/pedidos.php") ?>" class="<?= $currentAdminPage === "pedidos" ? "active" : "" ?>">Pedidos</a>
         <a href="<?= pageUrl("admin/relatorios.php") ?>" class="<?= $currentAdminPage === "relatorios" ? "active" : "" ?>">Relatórios</a>
         <a href="<?= pageUrl("admin/auditoria.php") ?>" class="<?= $currentAdminPage === "auditoria" ? "active" : "" ?>">Auditoria</a>

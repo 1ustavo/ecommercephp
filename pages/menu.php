@@ -17,7 +17,7 @@ require __DIR__ . "/../includes/header.php";
     <p style="color:var(--cinza-500);margin-bottom:20px">
         Cargo: <span class="badge badge-pago"><?= e($cargo) ?></span>
     </p>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <div class="flex gap-12 justify-center flex-wrap">
         <a href="<?= pageUrl("loja.php") ?>" class="btn btn-primary">Ir para a Loja</a>
         <a href="<?= pageUrl("perfil.php") ?>" class="btn btn-outline">Meu Perfil</a>
         <a href="<?= apiUrl("logout.php") ?>" class="btn btn-gray">Sair</a>

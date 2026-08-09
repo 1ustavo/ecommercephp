@@ -75,11 +75,21 @@ class Carrinho
     {
         global $pdo;
 
-        if (!Produto::estoqueDisponivel($produtoId, $variacaoId, $quantidade)) {
+        $carrinhoId = self::obterCarrinhoId();
+
+        // Verifica a quantidade já existente no carrinho para este produto
+        $stmt = $pdo->prepare("
+            SELECT quantidade FROM carrinho_itens
+            WHERE carrinho_id = ? AND produto_id = ? AND variacao_id IS NOT DISTINCT FROM ?
+        ");
+        $stmt->execute([$carrinhoId, $produtoId, $variacaoId]);
+        $jaNoCarrinho = (int) ($stmt->fetchColumn() ?: 0);
+
+        $totalSolicitado = $jaNoCarrinho + $quantidade;
+
+        if (!Produto::estoqueDisponivel($produtoId, $variacaoId, $totalSolicitado)) {
             return false;
         }
-
-        $carrinhoId = self::obterCarrinhoId();
 
         $stmt = $pdo->prepare("
             INSERT INTO carrinho_itens (carrinho_id, produto_id, variacao_id, quantidade)
@@ -135,8 +145,8 @@ class Carrinho
         $carrinhoId = self::obterCarrinhoId();
 
         $stmt = $pdo->prepare("
-            SELECT ci.*, p.nome, p.slug, p.preco,
-                   pv.tamanho, pv.cor, pv.preco_adicional,
+            SELECT ci.*, p.nome, p.slug, p.preco, p.estoque AS estoque_produto,
+                   pv.tamanho, pv.cor, pv.preco_adicional, pv.estoque AS estoque_variacao,
                    (SELECT url FROM produto_imagens WHERE produto_id = p.id AND principal = TRUE LIMIT 1) AS imagem
             FROM carrinho_itens ci
             JOIN produtos p ON p.id = ci.produto_id
@@ -150,6 +160,8 @@ class Carrinho
         foreach ($itens as &$item) {
             $item["preco_final"] = (float) $item["preco"] + (float) ($item["preco_adicional"] ?? 0);
             $item["subtotal"] = $item["preco_final"] * (int) $item["quantidade"];
+            // Estoque disponível para este item (variação tem prioridade)
+            $item["estoque_disponivel"] = $item["variacao_id"] ? (int) ($item["estoque_variacao"] ?? 0) : (int) ($item["estoque_produto"] ?? 0);
         }
 
         return $itens;

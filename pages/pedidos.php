@@ -5,7 +5,15 @@ require_once __DIR__ . "/../config/bootstrap.php";
 $auth = new Auth();
 $auth->verificarLogin();
 $usuarioId = (int) $_SESSION["usuario_id"];
-$orders = Pedido::porUsuario($usuarioId);
+
+// Paginação — 20 pedidos por página
+$limitePorPagina = 20;
+$paginaAtual = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
+$totalPedidosUsuario = Pedido::contarPorUsuario($usuarioId);
+$totalPaginas = max(1, (int) ceil($totalPedidosUsuario / $limitePorPagina));
+$paginaAtual = min($paginaAtual, $totalPaginas);
+
+$orders = Pedido::porUsuario($usuarioId, $paginaAtual, $limitePorPagina);
 $orderId = isset($_GET["id"]) ? (int) $_GET["id"] : null;
 $order = null;
 
@@ -78,6 +86,36 @@ $error = flash("checkout_error");
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <!-- Paginação -->
+        <?php if ($totalPaginas > 1): ?>
+            <?php
+            // Gera a lista de páginas com janela deslizante
+            $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
+            ?>
+            <div class="pagination-container">
+                <?php if ($paginaAtual > 1): ?>
+                    <a href="<?= pageUrl("pedidos.php") ?>?pagina=<?= $paginaAtual - 1 ?>" class="btn btn-gray btn-sm">← Anterior</a>
+                <?php endif; ?>
+
+                <?php foreach ($paginas as $pagina): ?>
+                    <?php if ($pagina === ".."): ?>
+                        <span class="btn btn-sm" style="pointer-events:none;color:var(--cinza-500)">..</span>
+                    <?php elseif ($pagina === $paginaAtual): ?>
+                        <span class="btn btn-primary btn-sm" style="pointer-events:none"><?= $pagina ?></span>
+                    <?php else: ?>
+                        <a href="<?= pageUrl("pedidos.php") ?>?pagina=<?= $pagina ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+
+                <?php if ($paginaAtual < $totalPaginas): ?>
+                    <a href="<?= pageUrl("pedidos.php") ?>?pagina=<?= $paginaAtual + 1 ?>" class="btn btn-gray btn-sm">Próxima →</a>
+                <?php endif; ?>
+            </div>
+            <p class="pagination-info">
+                Página <?= $paginaAtual ?> de <?= $totalPaginas ?> • <?= $totalPedidosUsuario ?> pedidos no total
+            </p>
+        <?php endif; ?>
     <?php endif; ?>
 <?php endif; ?>
 

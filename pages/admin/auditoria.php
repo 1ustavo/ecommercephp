@@ -15,7 +15,14 @@ $filtros = [
     "data_fim" => trim($_GET["data_fim"] ?? ""),
 ];
 
-$logs = buscarAuditoria($filtros);
+// Paginação — 10 logs por página
+$limitePorPagina = 10;
+$paginaAtual = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
+$totalLogs = contarAuditoria($filtros);
+$totalPaginas = max(1, (int) ceil($totalLogs / $limitePorPagina));
+$paginaAtual = min($paginaAtual, $totalPaginas);
+
+$logs = buscarAuditoria($filtros, $paginaAtual, $limitePorPagina);
 
 // Lista de usuários para o filtro
 $usuarios = $pdo->query("
@@ -25,7 +32,7 @@ $usuarios = $pdo->query("
 ")->fetchAll();
 ?>
 
-<h1 class="page-title">📋 Log de Auditoria</h1>
+<h1 class="page-title">Log de Auditoria</h1>
 <p class="page-subtitle">Registro de ações de funcionários e administradores</p>
 
 <!-- Filtros -->
@@ -109,6 +116,41 @@ $usuarios = $pdo->query("
             </tbody>
         </table>
     </div>
+
+    <!-- Paginação -->
+    <?php if ($totalPaginas > 1): ?>
+        <?php
+        // Monta a query string preservando os filtros atuais
+        $queryParams = $_GET;
+        unset($queryParams["pagina"]);
+        $queryString = http_build_query($queryParams);
+
+        // Gera a lista de páginas com janela deslizante
+        $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
+        ?>
+        <div class="pagination-container">
+            <?php if ($paginaAtual > 1): ?>
+                <a href="<?= pageUrl("admin/auditoria.php") ?>?<?= $queryString ?>&pagina=<?= $paginaAtual - 1 ?>" class="btn btn-gray btn-sm">← Anterior</a>
+            <?php endif; ?>
+
+            <?php foreach ($paginas as $pagina): ?>
+                <?php if ($pagina === ".."): ?>
+                    <span class="btn btn-sm" style="pointer-events:none;color:var(--cinza-500)">..</span>
+                <?php elseif ($pagina === $paginaAtual): ?>
+                    <span class="btn btn-primary btn-sm" style="pointer-events:none"><?= $pagina ?></span>
+                <?php else: ?>
+                    <a href="<?= pageUrl("admin/auditoria.php") ?>?<?= $queryString ?>&pagina=<?= $pagina ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+
+            <?php if ($paginaAtual < $totalPaginas): ?>
+                <a href="<?= pageUrl("admin/auditoria.php") ?>?<?= $queryString ?>&pagina=<?= $paginaAtual + 1 ?>" class="btn btn-gray btn-sm">Próxima →</a>
+            <?php endif; ?>
+        </div>
+        <p class="pagination-info">
+            Página <?= $paginaAtual ?> de <?= $totalPaginas ?> • <?= $totalLogs ?> registros no total
+        </p>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php require __DIR__ . "/../../includes/admin-footer.php"; ?>

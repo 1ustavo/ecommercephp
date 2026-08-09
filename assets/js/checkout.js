@@ -116,6 +116,115 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ============================================================
+    // CUPOM DE DESCONTO
+    // ============================================================
+    const cupomInput = document.getElementById("cupom-input");
+    const btnAplicarCupom = document.getElementById("btn-aplicar-cupom");
+    const cupomFeedback = document.getElementById("cupom-feedback");
+    const resumoDescontoRow = document.getElementById("resumo-desconto-row");
+    const resumoDesconto = document.getElementById("resumo-desconto");
+    const descontoHidden = document.getElementById("desconto-hidden");
+    // Estado inicial vindo do servidor (sessão)
+    let descontoAplicado = Number(descontoHidden?.value || 0);
+
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
+    }
+
+    function atualizarTotalComDesconto() {
+        const subtotal = getSubtotal();
+        const frete = getFrete();
+        const total = Math.max(0, subtotal + frete - descontoAplicado);
+
+        const resumoTotal = document.getElementById("resumo-total");
+        if (resumoTotal) {
+            resumoTotal.textContent = formatarMoeda(total);
+        }
+
+        if (resumoDescontoRow) {
+            resumoDescontoRow.style.display = descontoAplicado > 0 ? "flex" : "none";
+        }
+        if (resumoDesconto) {
+            resumoDesconto.textContent = "- " + formatarMoeda(descontoAplicado);
+        }
+        if (descontoHidden) {
+            descontoHidden.value = descontoAplicado.toFixed(2);
+        }
+    }
+
+    function aplicarCupom() {
+        if (!cupomInput || !cupomFeedback) return;
+
+        const codigo = cupomInput.value.trim().toUpperCase();
+        if (!codigo) {
+            cupomFeedback.innerHTML = '<span style="color:var(--erro-text)">Informe um código de cupom.</span>';
+            return;
+        }
+
+        const subtotal = getSubtotal();
+        const frete = getFrete();
+
+        btnAplicarCupom.disabled = true;
+        btnAplicarCupom.textContent = "Validando...";
+
+        // Usa a API do carrinho para persistir o cupom na sessão
+        fetch("../api/carrinho.php?action=aplicar_cupom", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify({ cupom: codigo }),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    descontoAplicado = Number(data.desconto);
+                    cupomFeedback.innerHTML = '<span style="color:var(--sucesso-text);font-weight:600">' + data.mensagem + " Desconto: " + data.desconto_formatado + "</span>";
+                    cupomInput.disabled = true;
+                    btnAplicarCupom.textContent = "Aplicado ✓";
+                    btnAplicarCupom.classList.add("btn-gray");
+                    btnAplicarCupom.classList.remove("btn-outline");
+                    atualizarTotalComDesconto();
+                } else {
+                    descontoAplicado = 0;
+                    cupomFeedback.innerHTML = '<span style="color:var(--erro-text)">' + data.message + "</span>";
+                    btnAplicarCupom.textContent = "Aplicar";
+                    atualizarTotalComDesconto();
+                }
+            })
+            .catch(() => {
+                descontoAplicado = 0;
+                cupomFeedback.innerHTML = '<span style="color:var(--erro-text)">Erro ao validar cupom. Tente novamente.</span>';
+                btnAplicarCupom.textContent = "Aplicar";
+                atualizarTotalComDesconto();
+            })
+            .finally(() => {
+                btnAplicarCupom.disabled = false;
+            });
+    }
+
+    if (btnAplicarCupom) {
+        btnAplicarCupom.addEventListener("click", aplicarCupom);
+    }
+
+    if (cupomInput) {
+        cupomInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                aplicarCupom();
+            }
+        });
+    }
+
+    // Sobrescreve updateSummary para incluir desconto
+    const originalUpdateSummary = updateSummary;
+    updateSummary = function () {
+        originalUpdateSummary();
+        atualizarTotalComDesconto();
+    };
+
     updateSummary();
     toggleCardFields();
 });

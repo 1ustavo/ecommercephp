@@ -21,6 +21,11 @@ $enderecos = Endereco::porUsuario((int) $_SESSION["usuario_id"]);
 $subtotal = Carrinho::subtotal();
 $pageTitle = "Checkout";
 
+// Cupom persistido na sessão (aplicado no carrinho)
+$cupomSessao = $_SESSION["cupom_aplicado"] ?? null;
+$descontoSessao = $cupomSessao ? (float) $cupomSessao["desconto"] : 0;
+$totalCheckout = max(0, $subtotal + 22.50 - $descontoSessao);
+
 require __DIR__ . "/../includes/header.php";
 ?>
 
@@ -99,7 +104,7 @@ require __DIR__ . "/../includes/header.php";
             </label>
         </div>
         <div class="mock-notice">Esboço: frete simulado. Em produção, integrar Correios API ou Melhor Envio.</div>
-        <div style="display:flex;gap:12px;margin-top:20px">
+        <div class="flex gap-12 mt-20">
             <button type="button" class="btn btn-gray btn-prev">Voltar</button>
             <button type="button" class="btn btn-primary btn-next">Continuar</button>
         </div>
@@ -125,7 +130,7 @@ require __DIR__ . "/../includes/header.php";
             <div class="form-group"><label class="form-label">Número do cartão</label><input type="text" class="form-control" placeholder="0000 0000 0000 0000" disabled></div>
         </div>
         <div class="mock-notice">Esboço: pagamento simulado via gateway (Mercado Pago/PagSeguro). Sem armazenamento de cartão (PCI).</div>
-        <div style="display:flex;gap:12px;margin-top:20px">
+        <div class="flex gap-12 mt-20">
             <button type="button" class="btn btn-gray btn-prev">Voltar</button>
             <button type="button" class="btn btn-primary btn-next">Revisar</button>
         </div>
@@ -133,13 +138,36 @@ require __DIR__ . "/../includes/header.php";
 
     <div class="checkout-panel card" data-panel="4">
         <h3 style="margin-bottom:16px;color:var(--verde-mato)">Confirmar pedido</h3>
+
+        <!-- Campo de cupom de desconto -->
+        <div class="form-group" style="margin-bottom:16px">
+            <label class="form-label" for="cupom-input">Cupom de desconto</label>
+            <div class="flex gap-8">
+                <input type="text" name="cupom" id="cupom-input" class="form-control" placeholder="Digite seu cupom (ex: BEMVINDO10)" style="text-transform:uppercase"
+                       value="<?= e($cupomSessao["codigo"] ?? "") ?>" <?= $cupomSessao ? "disabled" : "" ?>>
+                <button type="button" class="btn <?= $cupomSessao ? "btn-gray" : "btn-outline" ?>" id="btn-aplicar-cupom" style="white-space:nowrap">
+                    <?= $cupomSessao ? "Aplicado ✓" : "Aplicar" ?>
+                </button>
+            </div>
+            <div id="cupom-feedback" style="margin-top:8px;font-size:0.85rem">
+                <?php if ($cupomSessao): ?>
+                    <span style="color:var(--sucesso-text);font-weight:600">Cupom aplicado! Desconto: <?= formatarMoeda($descontoSessao) ?></span>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="cart-summary" style="margin-top:0">
             <div class="cart-summary-row"><span>Subtotal</span><span><?= formatarMoeda($subtotal) ?></span></div>
             <div class="cart-summary-row"><span>Frete</span><span id="resumo-frete">R$ 22,50</span></div>
-            <div class="cart-summary-row cart-summary-total"><span>Total</span><span id="resumo-total"><?= formatarMoeda($subtotal + 22.50) ?></span></div>
+            <div class="cart-summary-row" id="resumo-desconto-row" style="<?= $cupomSessao ? "display:flex" : "display:none" ?>">
+                <span>Desconto</span>
+                <span id="resumo-desconto" style="color:var(--verde-700);font-weight:700">- <?= formatarMoeda($descontoSessao) ?></span>
+            </div>
+            <div class="cart-summary-row cart-summary-total"><span>Total</span><span id="resumo-total"><?= formatarMoeda($totalCheckout) ?></span></div>
         </div>
         <input type="hidden" name="subtotal" value="<?= $subtotal ?>">
-        <div style="display:flex;gap:12px;margin-top:20px">
+        <input type="hidden" name="desconto" id="desconto-hidden" value="<?= $descontoSessao ?>">
+        <div class="flex gap-12 mt-20">
             <button type="button" class="btn btn-gray btn-prev">Voltar</button>
             <button type="submit" class="btn btn-primary" id="btn-confirmar">Confirmar e Pagar</button>
         </div>

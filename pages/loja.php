@@ -8,7 +8,14 @@ $filtros = [
     "preco_min" => $_GET["preco_min"] ?? "",
     "preco_max" => $_GET["preco_max"] ?? "",
     "ordenar" => $_GET["ordenar"] ?? "recentes",
+    "pagina" => isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1,
 ];
+
+// Paginação — 20 produtos por página
+$limitePorPagina = 20;
+$totalProdutos = Produto::contarComFiltros($filtros);
+$totalPaginas = max(1, (int) ceil($totalProdutos / $limitePorPagina));
+$filtros["pagina"] = min($filtros["pagina"], $totalPaginas);
 
 $produtos = Produto::listar($filtros);
 $categorias = Produto::categorias();
@@ -76,6 +83,41 @@ require __DIR__ . "/../includes/header.php";
             </a>
         <?php endforeach; ?>
     </div>
+
+    <!-- Paginação -->
+    <?php if ($totalPaginas > 1): ?>
+        <?php
+        // Monta a query string preservando os filtros atuais
+        $queryParams = $_GET;
+        unset($queryParams["pagina"]);
+        $queryString = http_build_query($queryParams);
+
+        // Gera a lista de páginas com janela deslizante
+        $paginas = paginacaoJanela($filtros["pagina"], $totalPaginas, 2);
+        ?>
+        <div class="pagination-container">
+            <?php if ($filtros["pagina"] > 1): ?>
+                <a href="<?= pageUrl("loja.php") ?>?<?= $queryString ?>&pagina=<?= $filtros["pagina"] - 1 ?>" class="btn btn-gray btn-sm">← Anterior</a>
+            <?php endif; ?>
+
+            <?php foreach ($paginas as $pagina): ?>
+                <?php if ($pagina === ".."): ?>
+                    <span class="btn btn-sm" style="pointer-events:none;color:var(--cinza-500)">..</span>
+                <?php elseif ($pagina === $filtros["pagina"]): ?>
+                    <span class="btn btn-primary btn-sm" style="pointer-events:none"><?= $pagina ?></span>
+                <?php else: ?>
+                    <a href="<?= pageUrl("loja.php") ?>?<?= $queryString ?>&pagina=<?= $pagina ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+
+            <?php if ($filtros["pagina"] < $totalPaginas): ?>
+                <a href="<?= pageUrl("loja.php") ?>?<?= $queryString ?>&pagina=<?= $filtros["pagina"] + 1 ?>" class="btn btn-gray btn-sm">Próxima →</a>
+            <?php endif; ?>
+        </div>
+        <p class="pagination-info">
+            Página <?= $filtros["pagina"] ?> de <?= $totalPaginas ?> • <?= $totalProdutos ?> produtos no total
+        </p>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php require __DIR__ . "/../includes/footer.php"; ?>

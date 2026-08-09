@@ -24,7 +24,6 @@ require __DIR__ . "/../includes/header.php";
 
 <div class="product-detail">
     <div class="product-detail-img" style="background:<?= corPlaceholder($produto["slug"]) ?>">
-        🛍️
     </div>
     <div>
         <div class="product-category"><?= e($produto["categoria_nome"]) ?></div>
@@ -35,7 +34,7 @@ require __DIR__ . "/../includes/header.php";
             Estoque: <span id="estoque-display"><?= (int) $produto["estoque"] ?></span> un.
         </p>
 
-        <form id="form-add-cart" action="<?= apiUrl("carrinho.php") ?>?action=adicionar" method="post" data-produto-id="<?= (int) $produto["id"] ?>">
+        <form id="form-add-cart" action="<?= apiUrl("carrinho.php") ?>?action=adicionar" method="post" data-produto-id="<?= (int) $produto["id"] ?>" data-estoque="<?= (int) $produto["estoque"] ?>">
             <input type="hidden" name="produto_id" value="<?= (int) $produto["id"] ?>">
             <?php if (!empty($variacoes)): ?>
                 <div class="variation-group">
@@ -59,7 +58,7 @@ require __DIR__ . "/../includes/header.php";
 
             <div class="form-group" style="max-width:120px">
                 <label class="form-label">Quantidade</label>
-                <input type="number" name="quantidade" class="form-control" value="1" min="1" max="99">
+                <input type="number" name="quantidade" class="form-control" value="1" min="1" max="<?= (int) $produto["estoque"] ?>" data-estoque="<?= (int) $produto["estoque"] ?>">
             </div>
 
             <button type="submit" class="btn btn-primary" style="margin-top:16px">Adicionar ao Carrinho</button>

@@ -1,6 +1,6 @@
 </main>
 <footer class="site-footer">
-    <p>&copy; 2026 EcoShop – E-commerce MVP</p>
+    <p>&copy; 2026 EcoShop – E-commerce</p>
 </footer>
 <script src="<?= asset("js/app.js") ?>"></script>
 <?php if (!empty($extraJs)): ?>

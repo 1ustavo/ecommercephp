@@ -21,8 +21,10 @@ class Produto
         }
 
         if (!empty($filtros["busca"])) {
-            $sql .= " AND (p.nome ILIKE ? OR p.descricao ILIKE ?)";
             $termo = "%" . $filtros["busca"] . "%";
+            $sql .= " AND (p.nome ILIKE ? OR p.descricao ILIKE ? OR p.palavras_chave_principais ILIKE ? OR p.palavras_chave_secundarias ILIKE ?)";
+            $params[] = $termo;
+            $params[] = $termo;
             $params[] = $termo;
             $params[] = $termo;
         }
@@ -46,10 +48,65 @@ class Produto
 
         $sql .= " ORDER BY $ordenacao";
 
+        // Paginação — 20 produtos por página
+        $pagina = isset($filtros["pagina"]) ? max(1, (int) $filtros["pagina"]) : 1;
+        $limite = 20;
+        $offset = ($pagina - 1) * $limite;
+
+        $sql .= " LIMIT ? OFFSET ?";
+        $params[] = $limite;
+        $params[] = $offset;
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Conta o total de produtos ativos com os mesmos filtros da listagem.
+     * Usado para calcular o número de páginas.
+     */
+    public static function contarComFiltros(array $filtros = []): int
+    {
+        global $pdo;
+
+        $sql = "
+            SELECT COUNT(*)
+            FROM produtos p
+            LEFT JOIN categorias c ON c.id = p.categoria_id
+            WHERE p.ativo = TRUE
+        ";
+        $params = [];
+
+        if (!empty($filtros["categoria"])) {
+            $sql .= " AND c.slug = ?";
+            $params[] = $filtros["categoria"];
+        }
+
+        if (!empty($filtros["busca"])) {
+            $termo = "%" . $filtros["busca"] . "%";
+            $sql .= " AND (p.nome ILIKE ? OR p.descricao ILIKE ? OR p.palavras_chave_principais ILIKE ? OR p.palavras_chave_secundarias ILIKE ?)";
+            $params[] = $termo;
+            $params[] = $termo;
+            $params[] = $termo;
+            $params[] = $termo;
+        }
+
+        if (!empty($filtros["preco_min"])) {
+            $sql .= " AND p.preco >= ?";
+            $params[] = $filtros["preco_min"];
+        }
+
+        if (!empty($filtros["preco_max"])) {
+            $sql .= " AND p.preco <= ?";
+            $params[] = $filtros["preco_max"];
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
     }
 
     public static function buscarPorSlug(string $slug): ?array
@@ -119,6 +176,49 @@ class Produto
         }
 
         return $estoque >= $quantidade;
+    }
+
+    /**
+     * Decrementa o estoque de forma atômica com condição de estoque suficiente.
+     * Retorna true se o estoque foi decrementado, false se não havia estoque suficiente.
+     * Usado para tratar concorrência (dois usuários comprando o mesmo produto ao mesmo tempo).
+     */
+    public static function decrementarEstoque(int $produtoId, ?int $variacaoId, int $quantidade): bool
+    {
+        global $pdo;
+
+        if ($variacaoId) {
+            $stmt = $pdo->prepare("
+                UPDATE produto_variacoes
+                SET estoque = estoque - ?
+                WHERE id = ? AND produto_id = ? AND estoque >= ?
+            ");
+            $stmt->execute([$quantidade, $variacaoId, $produtoId, $quantidade]);
+            $variacaoOk = $stmt->rowCount() > 0;
+
+            if (!$variacaoOk) {
+                return false;
+            }
+
+            // Também decrementa o estoque do produto pai
+            $stmt = $pdo->prepare("
+                UPDATE produtos
+                SET estoque = estoque - ?, updated_at = NOW()
+                WHERE id = ? AND estoque >= ?
+            ");
+            $stmt->execute([$quantidade, $produtoId, $quantidade]);
+
+            return $stmt->rowCount() > 0;
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE produtos
+            SET estoque = estoque - ?, updated_at = NOW()
+            WHERE id = ? AND estoque >= ?
+        ");
+        $stmt->execute([$quantidade, $produtoId, $quantidade]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public static function categorias(): array
@@ -207,16 +307,31 @@ class Produto
         ]);
     }
 
-    public static function todosAdmin(): array
+    public static function todosAdmin(int $page = 1, int $limit = 20): array
     {
         global $pdo;
 
-        return $pdo->query("
+        $page = max(1, $page);
+        $limit = max(1, min(100, $limit));
+        $offset = ($page - 1) * $limit;
+
+        $stmt = $pdo->prepare("
             SELECT p.*, c.nome AS categoria_nome
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
             ORDER BY p.created_at DESC
-        ")->fetchAll();
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->execute([$limit, $offset]);
+
+        return $stmt->fetchAll();
+    }
+
+    public static function contarTodosAdmin(): int
+    {
+        global $pdo;
+
+        return (int) $pdo->query("SELECT COUNT(*) FROM produtos")->fetchColumn();
     }
 
     /* ============================================================

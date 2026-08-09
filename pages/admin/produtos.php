@@ -34,7 +34,14 @@ if ($produtoId > 0) {
     }
 }
 
-$produtos = Produto::todosAdmin();
+// Paginação — 20 produtos por página
+$limitePorPagina = 20;
+$paginaAtual = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
+$totalProdutos = Produto::contarTodosAdmin();
+$totalPaginas = max(1, (int) ceil($totalProdutos / $limitePorPagina));
+$paginaAtual = min($paginaAtual, $totalPaginas);
+
+$produtos = Produto::todosAdmin($paginaAtual, $limitePorPagina);
 
 // Helper para preencher valores nos inputs em modo edição
 function valorCampo(?array $produto, string $campo): string
@@ -52,8 +59,8 @@ function valorCampo(?array $produto, string $campo): string
     <div class="produto-form-header">
         <h1><?= $produtoEditando ? "Editar: " . e($produtoEditando["nome"]) : "Cadastrar Novo Produto" ?></h1>
         <div class="produto-form-actions">
-            <a href="<?= pageUrl("admin/produtos.php") ?>" class="btn btn-gray">← Voltar à Lista</a>
-            <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">💾 Salvar Produto</button>
+            <a href="<?= pageUrl("admin/produtos.php") ?>" class="btn btn-gray">Voltar à Lista</a>
+            <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">Salvar Produto</button>
         </div>
     </div>
 
@@ -61,7 +68,7 @@ function valorCampo(?array $produto, string $campo): string
         <!-- Listagem rápida de produtos existentes -->
         <div class="collapsible-section" style="margin-bottom: 24px;">
             <button type="button" class="collapsible-header">
-                <span>📦 Produtos Cadastrados (<?= count($produtos) ?>)</span>
+                <span>Produtos Cadastrados (<?= $totalProdutos ?>)</span>
                 <span class="collapse-icon">▼</span>
             </button>
             <div class="collapsible-body">
@@ -99,6 +106,36 @@ function valorCampo(?array $produto, string $campo): string
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Paginação -->
+                <?php if ($totalPaginas > 1): ?>
+                    <?php
+                    // Gera a lista de páginas com janela deslizante
+                    $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
+                    ?>
+                    <div class="pagination-container">
+                        <?php if ($paginaAtual > 1): ?>
+                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual - 1 ?>" class="btn btn-gray btn-sm">← Anterior</a>
+                        <?php endif; ?>
+
+                        <?php foreach ($paginas as $pagina): ?>
+                            <?php if ($pagina === ".."): ?>
+                                <span class="btn btn-sm" style="pointer-events:none;color:var(--cinza-500)">..</span>
+                            <?php elseif ($pagina === $paginaAtual): ?>
+                                <span class="btn btn-primary btn-sm" style="pointer-events:none"><?= $pagina ?></span>
+                            <?php else: ?>
+                                <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $pagina ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+
+                        <?php if ($paginaAtual < $totalPaginas): ?>
+                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual + 1 ?>" class="btn btn-gray btn-sm">Próxima →</a>
+                        <?php endif; ?>
+                    </div>
+                    <p class="pagination-info">
+                        Página <?= $paginaAtual ?> de <?= $totalPaginas ?> • <?= $totalProdutos ?> produtos no total
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
@@ -121,23 +158,23 @@ function valorCampo(?array $produto, string $campo): string
          ============================================================ -->
     <nav class="tabs-nav" aria-label="Seções do produto">
         <button type="button" class="tab-btn active" data-tab="basicos">
-            <span class="tab-icon">📋</span>
-            <span class="tab-valid">✓</span>
+            <span class="tab-icon"></span>
+            <span class="tab-valid"></span>
             Dados Básicos
         </button>
         <button type="button" class="tab-btn" data-tab="seo">
-            <span class="tab-icon">🔍</span>
-            <span class="tab-valid">✓</span>
+            <span class="tab-icon"></span>
+            <span class="tab-valid"></span>
             SEO / Pesquisa
         </button>
         <button type="button" class="tab-btn" data-tab="identificacao">
-            <span class="tab-icon">🏷️</span>
-            <span class="tab-valid">✓</span>
+            <span class="tab-icon"></span>
+            <span class="tab-valid"></span>
             Identificação
         </button>
         <button type="button" class="tab-btn" data-tab="suporte">
-            <span class="tab-icon">💬</span>
-            <span class="tab-valid">✓</span>
+            <span class="tab-icon"></span>
+            <span class="tab-valid"></span>
             SAC / Suporte
         </button>
     </nav>
@@ -160,7 +197,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Informações Básicas -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>📋 Informações Básicas</span>
+                    <span>Informações Básicas</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -265,8 +302,8 @@ function valorCampo(?array $produto, string $campo): string
                         <div class="form-group col-4">
                             <label class="form-label" for="produto-status">Status</label>
                             <select class="form-control" id="produto-status" name="ativo">
-                                <option value="1" <?= $produtoEditando && $produtoEditando["ativo"] ? "selected" : "" ?>>🟢 Ativo</option>
-                                <option value="0" <?= $produtoEditando && !$produtoEditando["ativo"] ? "selected" : "" ?>>🔴 Inativo</option>
+                                <option value="1" <?= $produtoEditando && $produtoEditando["ativo"] ? "selected" : "" ?>>Ativo</option>
+                                <option value="0" <?= $produtoEditando && !$produtoEditando["ativo"] ? "selected" : "" ?>>Inativo</option>
                             </select>
                         </div>
                     </div>
@@ -276,12 +313,12 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Imagens do Produto -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>🖼️ Imagens do Produto</span>
+                    <span>Imagens do Produto</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
                     <p class="suggestion-hint">
-                        <span class="hint-icon">💡</span>
+                        <span class="hint-icon"></span>
                         Clique em cada área para adicionar uma imagem. Máximo 5MB por imagem.
                     </p>
                     <div class="image-uploader">
@@ -293,7 +330,7 @@ function valorCampo(?array $produto, string $campo): string
                                     <img src="<?= e($imagemAtual["url"]) ?>" alt="Imagem do produto">
                                 <?php endif; ?>
                                 <div class="upload-placeholder">
-                                    <span class="icon">📷</span>
+                                    <span class="icon"></span>
                                     <span><?= $i === 1 ? "Imagem Principal" : "Imagem $i" ?></span>
                                 </div>
                                 <button type="button" class="remove-image" aria-label="Remover imagem">×</button>
@@ -312,7 +349,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Palavras-chave -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>🔑 Palavras-chave</span>
+                    <span>Palavras-chave</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -326,7 +363,7 @@ function valorCampo(?array $produto, string $campo): string
                                 <input type="hidden" name="palavras_chave_principais">
                             </div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
+                                <span class="hint-icon"></span>
                                 Ex: camiseta orgânica, camiseta algodão, camiseta sustentável
                             </p>
                         </div>
@@ -340,7 +377,7 @@ function valorCampo(?array $produto, string $campo): string
                                 <input type="hidden" name="palavras_chave_secundarias">
                             </div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
+                                <span class="hint-icon"></span>
                                 Ex: roupa ecológica, moda sustentável, tecido natural
                             </p>
                         </div>
@@ -351,7 +388,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Meta dados -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>📝 Meta Título e Descrição</span>
+                    <span>Meta Título e Descrição</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -397,7 +434,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Slug e Preview SERP -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>🔗 Slug / URL Amigável</span>
+                    <span>Slug / URL Amigável</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -417,12 +454,12 @@ function valorCampo(?array $produto, string $campo): string
                                         class="input-action"
                                         id="slug-auto"
                                         title="Gerar slug automaticamente"
-                                        aria-label="Gerar slug automaticamente">🔄</button>
+                                        aria-label="Gerar slug automaticamente">Regenerar</button>
                             </div>
                             <div class="invalid-feedback">Slug inválido. Use apenas letras minúsculas, números e hífens.</div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
-                                Gerado automaticamente a partir do nome. Clique em 🔄 para regenerar.
+                                <span class="hint-icon"></span>
+                                Gerado automaticamente a partir do nome. Clique em "Regenerar" para regenerar.
                             </p>
                         </div>
 
@@ -430,7 +467,7 @@ function valorCampo(?array $produto, string $campo): string
                         <div class="form-group col-12">
                             <div class="serp-preview">
                                 <div class="serp-preview-label">
-                                    <span>🔍</span> Preview no Google
+                                    <span></span> Preview no Google
                                 </div>
                                 <div class="serp-url">
                                     <span class="favicon">E</span>
@@ -459,7 +496,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Códigos de identificação -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>🏷️ Códigos de Identificação</span>
+                    <span>Códigos de Identificação</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -477,7 +514,7 @@ function valorCampo(?array $produto, string $campo): string
                                    required>
                             <div class="invalid-feedback">EAN inválido. Use 8 ou 13 dígitos válidos.</div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
+                                <span class="hint-icon"></span>
                                 Código de barras internacional (EAN-8 ou EAN-13)
                             </p>
                         </div>
@@ -497,12 +534,12 @@ function valorCampo(?array $produto, string $campo): string
                                         class="input-action"
                                         id="sku-sugerir"
                                         title="Sugerir SKU automaticamente"
-                                        aria-label="Sugerir SKU automaticamente">✨</button>
+                                        aria-label="Sugerir SKU automaticamente">Sugerir</button>
                             </div>
                             <div class="invalid-feedback">O SKU deve ter pelo menos 5 caracteres.</div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
-                                Sugerido automaticamente com base na categoria e nome. Clique em ✨ para gerar.
+                                <span class="hint-icon"></span>
+                                Sugerido automaticamente com base na categoria e nome. Clique em "Sugerir" para gerar.
                             </p>
                         </div>
 
@@ -518,7 +555,7 @@ function valorCampo(?array $produto, string $campo): string
                                    maxlength="10">
                             <div class="invalid-feedback">NCM deve ter 8 dígitos numéricos.</div>
                             <p class="suggestion-hint">
-                                <span class="hint-icon">💡</span>
+                                <span class="hint-icon"></span>
                                 Nomenclatura Comum do Mercosul — usado para impostos no Brasil
                             </p>
                         </div>
@@ -535,7 +572,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Tickets de atendimento (do banco) -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>🎫 Tickets de Atendimento (<?= count($produtoTickets) ?>)</span>
+                    <span>Tickets de Atendimento (<?= count($produtoTickets) ?>)</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -568,11 +605,11 @@ function valorCampo(?array $produto, string $campo): string
                                 <div class="ticket-item">
                                     <div class="ticket-header">
                                         <span class="ticket-subject"><?= e($ticket["assunto"]) ?></span>
-                                        <span class="status-badge <?= $statusClass ?>">● <?= $statusLabel ?></span>
+                                        <span class="status-badge <?= $statusClass ?>"><?= $statusLabel ?></span>
                                     </div>
                                     <div class="ticket-meta">
-                                        <span>👤 Cliente: <?= e($ticket["cliente_nome"] ?? "—") ?></span>
-                                        <span>📅 <?= $dataTicket->format("d/m/Y") ?> às <?= $dataTicket->format("H:i") ?></span>
+                                        <span>Cliente: <?= e($ticket["cliente_nome"] ?? "—") ?></span>
+                                        <span><?= $dataTicket->format("d/m/Y") ?> às <?= $dataTicket->format("H:i") ?></span>
                                     </div>
 
                                     <?php if (!empty($ticket["mensagens"])): ?>
@@ -602,7 +639,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: FAQ do Produto (do banco) -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>❓ FAQ do Produto (<?= count($produtoFaqs) ?>)</span>
+                    <span>FAQ do Produto (<?= count($produtoFaqs) ?>)</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -632,7 +669,7 @@ function valorCampo(?array $produto, string $campo): string
             <!-- Seção: Histórico de Mensagens -->
             <div class="collapsible-section">
                 <button type="button" class="collapsible-header">
-                    <span>💬 Responder Cliente</span>
+                    <span>Responder Cliente</span>
                     <span class="collapse-icon">▼</span>
                 </button>
                 <div class="collapsible-body">
@@ -644,7 +681,7 @@ function valorCampo(?array $produto, string $campo): string
                                   placeholder="Digite sua resposta para o cliente..."></textarea>
                     </div>
                     <button type="button" class="btn btn-primary" id="btn-enviar-mensagem">
-                        📤 Enviar Mensagem
+                        Enviar Mensagem
                     </button>
                 </div>
             </div>

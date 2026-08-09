@@ -612,7 +612,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .then((data) => {
                 if (btnSalvar) {
                     btnSalvar.classList.remove("loading");
-                    btnSalvar.textContent = "💾 Salvar Produto";
+                    btnSalvar.textContent = "Salvar Produto";
                 }
 
                 if (data.sucesso) {
@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch((error) => {
                 if (btnSalvar) {
                     btnSalvar.classList.remove("loading");
-                    btnSalvar.textContent = "💾 Salvar Produto";
+                    btnSalvar.textContent = "Salvar Produto";
                 }
                 mostrarToast("Erro de conexão ao salvar produto", "error");
             });
