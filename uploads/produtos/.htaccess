@@ -1,12 +1,5 @@
-# ============================================================
-# SEGURANÇA DO DIRETÓRIO DE UPLOADS
-# Bloqueia execução de scripts PHP/JS para prevenir upload malicioso
-# ============================================================
-
-# Bloqueia execução de qualquer script
 <FilesMatch "\.(php|php3|php4|php5|php7|phtml|pl|py|jsp|asp|htm|html|shtml|sh|cgi)$">
     Require all denied
 </FilesMatch>
 
-# Desabilita listagem de diretório
 Options -Indexes

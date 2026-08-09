@@ -38,16 +38,16 @@ $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
 <div id="relatorio-body"></div>
 
 <!-- Renderiza a nova paginação -->
-<div class="pagination">
-    <?php foreach ($paginas as $pagina): ?>
-        <?php if ($pagina === ".."): ?>
+<!-- <div class="pagination">
+    <?php // foreach ($paginas as $pagina): ?>
+        <?php// if ($pagina === ".."): ?>
             <span>..</span> <!-- Reticências não clicáveis -->
-        <?php else: ?>
-            <?php $classe = ($pagina == $paginaAtual) ? "active" : ""; ?>
-            <a class="<?= $classe ?>" href="?page=<?= $pagina ?>"><?= $pagina ?></a>
-        <?php endif; ?>
-    <?php endforeach; ?>
-</div>
+        <!-- <?php //else: ?> -->
+            <!-- <?php $classe // = ($pagina == $paginaAtual) ? "active" : ""; ?> -->
+            <!-- <a class="<?= $classe ?>" href="?page=<?= $pagina ?>"><?= $pagina ?></a> -->
+        <!-- <?php //endif; ?> -->
+    <!-- <?php //endforeach; ?> -->
+<!-- </div>  -->
 
 <script src="<?= asset("js/admin-relatorios.js") ?>"></script>
 <?php require __DIR__ . "/../../includes/admin-footer.php"; ?>

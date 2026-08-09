@@ -2,27 +2,21 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Proteção: apenas admin pode acessar
 $auth = new Auth();
 $auth->verificarAdmin();
 
-// Aceita apenas POST
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);
     echo json_encode(["sucesso" => false, "erro" => "Método não permitido."]);
     exit;
 }
 
-// Recebe dados (JSON ou FormData para upload de arquivos)
 $dados = json_decode(file_get_contents("php://input"), true);
 
 if (!is_array($dados)) {
     $dados = $_POST;
 }
 
-// ------------------------------------------------------------
-// VALIDAÇÕES DOS CAMPOS OBRIGATÓRIOS
-// ------------------------------------------------------------
 $erros = [];
 
 $nome = trim($dados["nome"] ?? "");
@@ -31,12 +25,10 @@ $ean = trim($dados["ean"] ?? "");
 $preco = (float) ($dados["preco"] ?? 0);
 $estoque = (int) ($dados["estoque"] ?? 0);
 
-// Nome: obrigatório, mínimo 3 caracteres
 if (strlen($nome) < 3) {
     $erros[] = "O nome do produto deve ter pelo menos 3 caracteres.";
 }
 
-// SKU: obrigatório, mínimo 5 caracteres, único
 if (strlen($sku) < 5) {
     $erros[] = "O SKU deve ter pelo menos 5 caracteres.";
 } else {
@@ -46,9 +38,6 @@ if (strlen($sku) < 5) {
     }
 }
 
-// EAN: obrigatório, validação de formato (8 ou 13 dígitos)
-// Aceita apenas dígitos numéricos (não valida dígito verificador
-// para não bloquear EANs válidos de fornecedores)
 $eanLimpo = preg_replace("/[\s-]/", "", $ean);
 if (!preg_match("/^\d{8}$|^\d{13}$/", $eanLimpo)) {
     $erros[] = "EAN inválido. Use 8 ou 13 dígitos numéricos.";
@@ -59,17 +48,14 @@ if (!preg_match("/^\d{8}$|^\d{13}$/", $eanLimpo)) {
     }
 }
 
-// Preço: obrigatório, maior que zero
 if ($preco <= 0) {
     $erros[] = "O preço deve ser maior que zero.";
 }
 
-// Estoque: não pode ser negativo
 if ($estoque < 0) {
     $erros[] = "O estoque não pode ser negativo.";
 }
 
-// Slug: formato válido e único
 $slug = trim($dados["slug"] ?? "");
 if (!preg_match("/^[a-z0-9-]+$/", $slug) || $slug === "") {
     $erros[] = "Slug inválido. Use apenas letras minúsculas, números e hífens.";
@@ -80,7 +66,6 @@ if (!preg_match("/^[a-z0-9-]+$/", $slug) || $slug === "") {
     }
 }
 
-// NCM: opcional, mas se preenchido deve ter 8 dígitos
 $ncm = trim($dados["ncm"] ?? "");
 if ($ncm !== "" && !preg_match("/^\d{8}$/", preg_replace("/[\s.-]/", "", $ncm))) {
     $erros[] = "NCM deve ter 8 dígitos numéricos.";
@@ -93,9 +78,6 @@ if (!empty($erros)) {
     exit;
 }
 
-// ------------------------------------------------------------
-// PREPARA DADOS PARA INSERÇÃO
-// ------------------------------------------------------------
 $dadosProduto = [
     "categoria_id" => isset($dados["categoria_id"]) ? (int) $dados["categoria_id"] : null,
     "nome" => $nome,
