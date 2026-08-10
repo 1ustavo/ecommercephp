@@ -30,6 +30,9 @@ $pedidos = Pedido::todosAdmin($paginaAtual, $limitePorPagina);
                 <p><strong>Cliente:</strong> <?= e($pedido["cliente_nome"]) ?></p>
                 <p><strong>Total:</strong> <?= formatarMoeda((float) $pedido["total"]) ?></p>
                 <p><strong>Data:</strong> <?= e($pedido["created_at"]) ?></p>
+                <div style="margin-top:12px">
+                    <a class="btn btn-outline" href="<?= pageUrl("admin/pedido_detalhe.php") ?>?id=<?= (int) $pedido["id"] ?>">Ver detalhes</a>
+                </div>
             </div>
         <?php endforeach; ?>
     </div>
