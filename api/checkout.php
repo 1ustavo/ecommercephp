@@ -121,6 +121,22 @@ registrarAuditoria(
     "Pedido #" . $pedidoId . " | Frete: " . $metodoFrete . " | Pagamento: " . $metodoPagamento
 );
 
+// Se o método de pagamento for cartão, iniciar Stripe Checkout
+if ($metodoPagamento === 'cartao') {
+    $checkoutUrl = GatewayPagamento::criarCheckout($pedidoId, 'stripe');
+    if ($checkoutUrl) {
+        // Redireciona o cliente para a URL segura do Stripe Checkout
+        header("Location: " . $checkoutUrl);
+        exit;
+    }
+
+    // Falha ao criar sessão de pagamento => sinalizar erro e voltar ao checkout
+    flash("checkout_error", "Não foi possível iniciar o pagamento. Tente novamente.");
+    header("Location: " . pageUrl("checkout.php"));
+    exit;
+}
+
+// Fluxo antigo: finalizar sem redirecionamento externo
 flash("checkout_success", "Pedido criado com sucesso.");
 header("Location: " . pageUrl("pedidos.php"));
 exit;

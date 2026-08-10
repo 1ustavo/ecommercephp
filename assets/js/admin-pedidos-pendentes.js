@@ -1,10 +1,3 @@
-/* ============================================================
-   ADMIN-PEDIDOS-PENDENTES.JS
-   Interage com os endpoints de aprovacao/recusa de pedidos.
-   - Server-side render ja monta a lista; este JS apenas anexa
-     os comportamentos dos botoes e atualiza a UI apos a acao.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal-recusar");
     const modalPedidoId = document.getElementById("modal-pedido-id");

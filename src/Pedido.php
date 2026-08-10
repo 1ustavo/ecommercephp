@@ -81,11 +81,17 @@ class Pedido
         global $pdo;
 
         $pedido = self::buscar($pedidoId);
-        if (!$pedido || $pedido["status"] !== "AGUARDANDO_APROVACAO") {
+            if (!$pedido) {
             return false;
         }
 
-        // Revalida estoque antes de aprovar (pode ter mudado desde o checkout)
+            // Permitir aprovação quando o pedido estiver aguardando aprovação ou quando já estiver pago/pendente
+            $allowStatuses = ["AGUARDANDO_APROVACAO", "PENDENTE", "PAGO"];
+            if (!in_array($pedido["status"], $allowStatuses, true)) {
+                return false;
+            }
+
+            // Revalida estoque antes de aprovar (pode ter mudado desde o checkout)
         $itens = self::itens($pedidoId);
         foreach ($itens as $item) {
             $variacaoId = $item["variacao_id"] ? (int) $item["variacao_id"] : null;
@@ -201,9 +207,26 @@ class Pedido
     {
         global $pdo;
 
-        $pdo->prepare("UPDATE pedidos SET status = 'PAGO', updated_at = NOW() WHERE id = ? AND status IN ('PENDENTE', 'APROVADO')")
-            ->execute([$pedidoId]);
-    }
+            $pedido = self::buscar($pedidoId);
+            if (!$pedido) {
+                return;
+            }
+
+            $current = $pedido["status"];
+
+            // Se o pedido ainda está em AGUARDANDO_APROVACAO, marcamos como PENDENTE (pago e aguardando aprovação)
+            if ($current === "AGUARDANDO_APROVACAO") {
+                $pdo->prepare("UPDATE pedidos SET status = 'PENDENTE', updated_at = NOW() WHERE id = ? AND status = 'AGUARDANDO_APROVACAO'")
+                    ->execute([$pedidoId]);
+                return;
+            }
+
+            // Para estados já em PENDENTE/APROVADO, marcamos como PAGO
+            if (in_array($current, ['PENDENTE', 'APROVADO', 'PENDENTE'], true)) {
+                $pdo->prepare("UPDATE pedidos SET status = 'PAGO', updated_at = NOW() WHERE id = ?")
+                    ->execute([$pedidoId]);
+            }
+        }
 
     public static function porUsuario(int $usuarioId, int $page = 1, int $limit = 20): array
     {

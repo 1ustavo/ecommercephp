@@ -1,9 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const apiEndpoint = "../api/carrinho.php";
 
-    // ============================================================
-    // Toast / feedback visual
-    // ============================================================
     function showToast(message, type = "error") {
         const existing = document.querySelector(".toast");
         if (existing) existing.remove();
@@ -41,9 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ============================================================
     // API helpers
-    // ============================================================
     async function request(action, body) {
         const response = await fetch(`${apiEndpoint}?action=${encodeURIComponent(action)}`, {
             method: "POST",
@@ -137,9 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ============================================================
-    // CUPOM DE DESCONTO NO CARRINHO
-    // ============================================================
     const cupomInput = document.getElementById("cupom-input-cart");
     const btnAplicar = document.getElementById("btn-aplicar-cupom-cart");
     const cupomFeedback = document.getElementById("cupom-feedback-cart");

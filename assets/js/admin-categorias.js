@@ -1,8 +1,3 @@
-/* ============================================================
-   ADMIN-CATEGORIAS.JS
-   CRUD de categorias via modal + API.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal-categoria");
     const form = document.getElementById("form-categoria");

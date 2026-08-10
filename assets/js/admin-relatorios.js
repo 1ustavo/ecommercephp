@@ -1,9 +1,3 @@
-/* ============================================================
-   ADMIN-RELATORIOS.JS
-   Seletor de mês + fetch AJAX para atualizar relatórios sem
-   recarregar a página.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const btnAnterior = document.getElementById("btn-mes-anterior");
     const btnProximo = document.getElementById("btn-mes-proximo");
@@ -77,9 +71,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const statusKeys = Object.keys(dados.status || {});
 
-        // ============================================================
-        // CARDS PRINCIPAIS — Números grandes em destaque
-        // ============================================================
         const cards = [
             { label: "Total de Pedidos", valor: String(dados.total_pedidos), destaque: true },
             { label: "Faturamento Bruto", valor: formatarMoeda(dados.faturamento_bruto), destaque: false },
@@ -98,9 +89,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         html += '</div>';
 
-        // ============================================================
-        // TABELA DE STATUS — Distribuição por status
-        // ============================================================
         html += '<div class="relatorio-status-section">';
         html += '<div class="relatorio-section-header">' +
             '<h2>Distribuição por Status</h2>' +
@@ -136,9 +124,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         html += '</div>';
 
-        // ============================================================
-        // RESUMO FINANCEIRO — Detalhamento de valores
-        // ============================================================
         html += '<div class="relatorio-resumo">';
         html += '<div class="relatorio-section-header">' +
             '<h2>Resumo Financeiro</h2>' +

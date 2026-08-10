@@ -1,8 +1,3 @@
-/* ============================================================
-   ADMIN-CUPONS.JS
-   CRUD de cupons via modal + API.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal-cupom");
     const form = document.getElementById("form-cupom");

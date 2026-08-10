@@ -1,12 +1,5 @@
-/* ============================================================
-   ADMIN-PRODUTOS.JS — Interatividade do Painel de Gestão
-   de Produtos: abas, validação, previews e feedback visual
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
-    /* --------------------------------------------------------
-       1. SISTEMA DE ABAS (TABS)
-       -------------------------------------------------------- */
+
     const tabButtons = document.querySelectorAll(".tab-btn");
     const tabPanels = document.querySelectorAll(".tab-panel");
 
@@ -14,20 +7,15 @@ document.addEventListener("DOMContentLoaded", function () {
         btn.addEventListener("click", function () {
             const target = this.dataset.tab;
 
-            // Remove active de todos os botões e painéis
             tabButtons.forEach((b) => b.classList.remove("active"));
             tabPanels.forEach((p) => p.classList.remove("active"));
 
-            // Ativa o botão e painel clicado
             this.classList.add("active");
             const panel = document.getElementById("tab-" + target);
             if (panel) panel.classList.add("active");
         });
     });
 
-    /* --------------------------------------------------------
-       2. SEÇÕES COLAPSÁVEIS
-       -------------------------------------------------------- */
     const collapsibleHeaders = document.querySelectorAll(".collapsible-header");
 
     collapsibleHeaders.forEach((header) => {
@@ -37,27 +25,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    /* --------------------------------------------------------
-       3. GERAÇÃO AUTOMÁTICA DE SLUG
-       -------------------------------------------------------- */
     const nomeInput = document.getElementById("produto-nome");
     const slugInput = document.getElementById("produto-slug");
     const slugAuto = document.getElementById("slug-auto");
     let slugManual = false;
 
-    // Função para gerar slug a partir do nome
     function gerarSlug(texto) {
         return texto
             .toLowerCase()
             .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "") // remove acentos
-            .replace(/[^a-z0-9\s-]/g, "")     // remove caracteres especiais
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9\s-]/g, "")
             .trim()
-            .replace(/\s+/g, "-")             // espaços viram hífens
-            .replace(/-+/g, "-");             // remove hífens duplicados
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-");
     }
 
-    // Gera slug automaticamente quando o nome muda (se não foi editado manualmente)
     if (nomeInput && slugInput) {
         nomeInput.addEventListener("input", function () {
             if (!slugManual) {
@@ -66,13 +49,11 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Marca como manual quando o usuário edita o slug
         slugInput.addEventListener("input", function () {
             slugManual = this.value !== gerarSlug(nomeInput.value);
             atualizarPreviewSERP();
         });
 
-        // Botão para regenerar slug automaticamente
         if (slugAuto) {
             slugAuto.addEventListener("click", function () {
                 slugManual = false;
@@ -83,13 +64,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    /* --------------------------------------------------------
-       4. CONTADOR DE CARACTERES (Meta Título e Descrição)
-       -------------------------------------------------------- */
     const metaTitulo = document.getElementById("meta-titulo");
     const metaDescricao = document.getElementById("meta-descricao");
 
-    // Limites recomendados pelo Google
     const LIMITE_TITULO = 60;
     const LIMITE_DESCRICAO = 160;
 
@@ -101,7 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const length = input.value.length;
         counter.textContent = length + " / " + limite;
 
-        // Feedback visual por faixa de caracteres
         counter.classList.remove("warning", "danger");
         if (length > limite) {
             counter.classList.add("danger");
@@ -124,15 +100,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* --------------------------------------------------------
-       5. PREVIEW DE SERP (Simulação Google)
-       -------------------------------------------------------- */
     function atualizarPreviewSERP() {
         const previewTitulo = document.getElementById("serp-titulo");
         const previewDesc = document.getElementById("serp-descricao");
         const previewUrl = document.getElementById("serp-url");
 
-        // Título: usa meta título ou nome do produto
         if (previewTitulo) {
             const titulo = metaTitulo && metaTitulo.value
                 ? metaTitulo.value
@@ -140,7 +112,6 @@ document.addEventListener("DOMContentLoaded", function () {
             previewTitulo.textContent = titulo || "Título do produto aparecerá aqui";
         }
 
-        // Descrição: usa meta descrição ou descrição curta
         if (previewDesc) {
             const desc = metaDescricao && metaDescricao.value
                 ? metaDescricao.value
@@ -150,14 +121,12 @@ document.addEventListener("DOMContentLoaded", function () {
             previewDesc.textContent = desc || "A descrição do produto aparecerá aqui no Google.";
         }
 
-        // URL: usa o slug
         if (previewUrl && slugInput) {
             const slug = slugInput.value || "nome-do-produto";
             previewUrl.textContent = "www.ecoshop.com.br/produto/" + slug;
         }
     }
 
-    // Atualiza preview quando a descrição curta muda
     const descricaoCurta = document.getElementById("descricao-curta");
     if (descricaoCurta) {
         descricaoCurta.addEventListener("input", function () {
@@ -166,9 +135,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* --------------------------------------------------------
-       6. UPLOAD DE IMAGENS COM PREVIEW
-       -------------------------------------------------------- */
     const imageUploaders = document.querySelectorAll(".image-upload-item");
 
     imageUploaders.forEach((item) => {
@@ -180,24 +146,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 const file = this.files[0];
                 if (!file) return;
 
-                // Valida tipo de arquivo
                 if (!file.type.startsWith("image/")) {
                     mostrarToast("Por favor, selecione um arquivo de imagem", "error");
                     this.value = "";
                     return;
                 }
 
-                // Valida tamanho (máx 5MB)
                 if (file.size > 5 * 1024 * 1024) {
                     mostrarToast("Imagem muito grande. Máximo 5MB.", "error");
                     this.value = "";
                     return;
                 }
 
-                // Cria preview com FileReader
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    // Remove preview anterior se existir
                     const imgExistente = item.querySelector("img");
                     if (imgExistente) imgExistente.remove();
 
@@ -211,7 +173,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        // Botão remover imagem
         if (removeBtn) {
             removeBtn.addEventListener("click", function (e) {
                 e.preventDefault();
@@ -225,30 +186,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    /* --------------------------------------------------------
-       7. TAGS DE PALAVRAS-CHAVE
-       -------------------------------------------------------- */
     const tagsInputs = document.querySelectorAll(".tags-input");
 
     tagsInputs.forEach((container) => {
         const input = container.querySelector("input");
         const hiddenInput = container.querySelector('input[type="hidden"]');
         
-        // Carrega tags existentes do atributo data-tags (modo edição)
         const tagsIniciais = (container.dataset.tags || "")
             .split(",")
             .map((t) => t.trim())
             .filter((t) => t.length > 0);
         const tags = [...tagsIniciais];
-
-        // Renderiza tags iniciais
         renderTags();
 
         function renderTags() {
-            // Remove tags existentes (exceto o input)
             container.querySelectorAll(".tag").forEach((t) => t.remove());
 
-            // Renderiza cada tag
             tags.forEach((tag, index) => {
                 const tagEl = document.createElement("span");
                 tagEl.className = "tag";
@@ -256,13 +209,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 container.insertBefore(tagEl, input);
             });
 
-            // Atualiza input hidden com tags separadas por vírgula
             if (hiddenInput) {
                 hiddenInput.value = tags.join(",");
             }
         }
 
-        // Adiciona tag ao pressionar Enter ou vírgula
         input.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === ",") {
                 e.preventDefault();
@@ -275,7 +226,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Remove tag ao clicar no X
         container.addEventListener("click", function (e) {
             if (e.target.classList.contains("tag-remove")) {
                 const index = parseInt(e.target.dataset.index);
@@ -284,7 +234,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Foca o input ao clicar no container
         container.addEventListener("click", function (e) {
             if (e.target === container) {
                 input.focus();
@@ -292,9 +241,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    /* --------------------------------------------------------
-       8. SUGESTÃO AUTOMÁTICA DE SKU
-       -------------------------------------------------------- */
     const categoriaSelect = document.getElementById("categoria");
     const skuInput = document.getElementById("produto-sku");
     const skuSugerir = document.getElementById("sku-sugerir");
@@ -303,7 +249,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function gerarSugestaoSKU() {
         if (!skuInput || !nomeInput) return;
 
-        // Pega iniciais da categoria (máx 3 letras)
         const categoria = categoriaSelect ? categoriaSelect.value : "";
         const catIniciais = categoria
             .split(" ")
@@ -312,7 +257,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .toUpperCase()
             .slice(0, 3);
 
-        // Pega iniciais do nome (máx 3 letras)
         const nome = nomeInput.value || "PROD";
         const nomeIniciais = nome
             .split(" ")
@@ -322,7 +266,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .replace(/[^A-Z]/g, "")
             .slice(0, 3);
 
-        // Gera número aleatório de 4 dígitos
         const numero = Math.floor(1000 + Math.random() * 9000);
 
         return (catIniciais || "GEN") + "-" + (nomeIniciais || "PROD") + "-" + numero;
@@ -346,13 +289,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* --------------------------------------------------------
-       9. VALIDAÇÃO DE CAMPOS
-       -------------------------------------------------------- */
-    // Validação de EAN-13 (código de barras)
-    // Aceita EAN-8 ou EAN-13 com apenas dígitos numéricos.
-    // NÃO valida dígito verificador para não bloquear EANs válidos
-    // que podem ter sido gerados sem o dígito verificador correto.
     function validarEAN(ean) {
         // Remove espaços e hífens
         ean = ean.replace(/[\s-]/g, "");
@@ -445,17 +381,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    /* --------------------------------------------------------
-       10. VALIDAÇÃO DAS ABAS (check verde quando válida)
-       -------------------------------------------------------- */
     function atualizarValidacaoAbas() {
-        // Aba 1: Dados básicos — nome, preço, estoque
         const nomeOk = document.getElementById("produto-nome")?.value.trim().length >= 3;
         const precoOk = parseFloat(document.getElementById("produto-preco")?.value) > 0;
         const estoqueOk = parseInt(document.getElementById("produto-estoque")?.value) >= 0;
         const tab1Ok = nomeOk && precoOk && estoqueOk;
 
-        // Aba 2: SEO — slug válido
         const slugOk = /^[a-z0-9-]+$/.test(document.getElementById("produto-slug")?.value || "");
         const tab2Ok = slugOk;
 
@@ -464,7 +395,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const eanOk = validarEAN(document.getElementById("produto-ean")?.value || "");
         const tab3Ok = skuOk && eanOk;
 
-        // Aplica classes nas abas
         const tab1 = document.querySelector('.tab-btn[data-tab="basicos"]');
         const tab2 = document.querySelector('.tab-btn[data-tab="seo"]');
         const tab3 = document.querySelector('.tab-btn[data-tab="identificacao"]');
@@ -477,9 +407,6 @@ document.addEventListener("DOMContentLoaded", function () {
         atualizarProgresso();
     }
 
-    /* --------------------------------------------------------
-       11. BARRA DE PROGRESSO DO FORMULÁRIO
-       -------------------------------------------------------- */
     function atualizarProgresso() {
         const barra = document.querySelector(".progress-bar-fill");
         const percentual = document.querySelector(".progress-percent");
@@ -503,9 +430,6 @@ document.addEventListener("DOMContentLoaded", function () {
         percentual.textContent = pct + "%";
     }
 
-    /* --------------------------------------------------------
-       12. FAQ — Expandir/recolher itens
-       -------------------------------------------------------- */
     const faqItems = document.querySelectorAll(".faq-item");
 
     faqItems.forEach((item) => {
@@ -517,9 +441,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    /* --------------------------------------------------------
-       13. TOAST — Feedback visual flutuante
-       -------------------------------------------------------- */
     function mostrarToast(mensagem, tipo = "success") {
         // Remove toasts existentes
         document.querySelectorAll(".toast").forEach((t) => t.remove());
@@ -541,12 +462,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 3000);
     }
 
-    // Expõe a função globalmente para uso em atributos onclick
     window.mostrarToast = mostrarToast;
 
-    /* --------------------------------------------------------
-       14. SUBMISSÃO DO FORMULÁRIO (via API)
-       -------------------------------------------------------- */
     const form = document.getElementById("form-produto");
 
     if (form) {
@@ -644,9 +561,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* --------------------------------------------------------
-       14b. ENVIO DE MENSAGEM PARA O CLIENTE
-       -------------------------------------------------------- */
     const btnEnviarMensagem = document.getElementById("btn-enviar-mensagem");
     const novaMensagem = document.getElementById("nova-mensagem");
 
@@ -667,8 +581,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // Cria um novo ticket ou usa o primeiro existente
-            // (em uma implementação real, selecionaria o ticket ativo)
             fetch("../../api/admin/buscar_produto.php?id=" + produtoId, {
                 method: "GET",
             })
@@ -711,10 +623,6 @@ document.addEventListener("DOMContentLoaded", function () {
             mostrarToast("Erro de conexão ao enviar mensagem", "error");
         });
     }
-
-    /* --------------------------------------------------------
-       15. INICIALIZAÇÃO
-       -------------------------------------------------------- */
     // Atualiza contadores iniciais
     atualizarContador(metaTitulo, "contador-titulo", LIMITE_TITULO);
     atualizarContador(metaDescricao, "contador-descricao", LIMITE_DESCRICAO);

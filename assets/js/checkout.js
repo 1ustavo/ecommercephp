@@ -116,9 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ============================================================
-    // CUPOM DE DESCONTO
-    // ============================================================
     const cupomInput = document.getElementById("cupom-input");
     const btnAplicarCupom = document.getElementById("btn-aplicar-cupom");
     const cupomFeedback = document.getElementById("cupom-feedback");

@@ -1,8 +1,3 @@
-/* ============================================================
-   ADMIN-MENU.JS
-   Menu hambúrguer para o sidebar do admin em mobile.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const btnMenu = document.getElementById("btn-admin-menu");
     const sidebar = document.getElementById("admin-sidebar");

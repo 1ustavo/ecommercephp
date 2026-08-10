@@ -178,17 +178,21 @@ class GatewayPagamento
     /**
      * Processa webhook de confirmação de pagamento.
      */
-    public static function processarWebhook(string $gateway, array $payload): bool
+    /**
+     * Processa webhook de confirmação de pagamento.
+     * Agora espera o payload bruto (JSON string) para validar a assinatura corretamente.
+     */
+    public static function processarWebhook(string $gateway, string $rawPayload, string $sigHeader = ""): bool
     {
         self::init();
 
         if ($gateway === "stripe") {
-            $sigHeader = $_SERVER["HTTP_STRIPE_SIGNATURE"] ?? "";
             try {
+                $webhookSecret = $_ENV["STRIPE_WEBHOOK_SECRET"] ?? getenv("STRIPE_WEBHOOK_SECRET") ?: "";
                 $event = \Stripe\Webhook::constructEvent(
-                    json_encode($payload),
+                    $rawPayload,
                     $sigHeader,
-                    $_ENV["STRIPE_WEBHOOK_SECRET"] ?? ""
+                    $webhookSecret
                 );
 
                 if ($event->type === "checkout.session.completed") {
@@ -199,12 +203,16 @@ class GatewayPagamento
                         return true;
                     }
                 }
+
+                // Tratar outros eventos relevantes conforme necessário
             } catch (Exception $e) {
                 error_log("Stripe webhook error: " . $e->getMessage());
             }
         }
 
+        // Mantém compatibilidade com Mercado Pago (espera array decodificado em JSON)
         if ($gateway === "mercadopago") {
+            $payload = json_decode($rawPayload, true);
             $pedidoId = (int) ($payload["metadata"]["pedido_id"] ?? 0);
             if ($pedidoId && ($payload["status"] ?? "") === "approved") {
                 Pedido::confirmarPagamento($pedidoId);
