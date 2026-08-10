@@ -12,6 +12,7 @@ require __DIR__ . "/../includes/header.php";
 <?php endif; ?>
 
 <form action="<?= apiUrl('solicitar_reset.php') ?>" method="post">
+    <?= csrf_input() ?>
     <div class="form-group">
         <label class="form-label">Email cadastrado</label>
         <input type="email" name="email" class="form-control" required>

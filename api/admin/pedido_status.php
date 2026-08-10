@@ -5,6 +5,9 @@ require_once __DIR__ . "/../../src/helpers.php";
 // API para alterar status de pedidos por admin
 requererAdminApi();
 
+// Verify CSRF token passed via X-CSRF-Token header or JSON body
+verify_csrf_from_request(true);
+
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $pedidoId = isset($input['pedido_id']) ? (int) $input['pedido_id'] : 0;
 action:

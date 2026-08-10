@@ -27,6 +27,7 @@ $sucesso = isset($_GET["sucesso"]);
 <?php endif; ?>
 
 <form class="auth-form" action="<?= apiUrl("login.php") ?>" method="post">
+    <?= csrf_input() ?>
     <div class="form-group">
         <label class="form-label">E-mail</label>
         <input type="email" name="email" class="form-control" required>

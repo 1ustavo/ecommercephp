@@ -12,6 +12,7 @@ require __DIR__ . "/../includes/header.php";
     <div class="alert alert-error">Token inválido.</div>
 <?php else: ?>
     <form action="<?= apiUrl('resetar_senha.php') ?>" method="post">
+        <?= csrf_input() ?>
         <input type="hidden" name="token" value="<?= e($token) ?>">
         <div class="form-group">
             <label class="form-label">Nova senha</label>

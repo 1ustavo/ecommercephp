@@ -22,6 +22,10 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+// CSRF protection
+verify_csrf_from_request(true);
+
+
 $usuarioId = (int) $_SESSION["usuario_id"];
 $enderecoId = isset($_POST["endereco_id"]) && $_POST["endereco_id"] !== "" ? (int) $_POST["endereco_id"] : null;
 $metodoFrete = trim($_POST["metodo_frete"] ?? "pac");

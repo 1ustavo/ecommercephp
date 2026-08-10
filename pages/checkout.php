@@ -44,6 +44,7 @@ require __DIR__ . "/../includes/header.php";
 </div>
 
 <form id="checkout-form" action="<?= apiUrl("checkout.php") ?>" method="post">
+        <?= csrf_input() ?>
     <div class="checkout-panel active card" data-panel="1">
         <h3 style="margin-bottom:16px;color:var(--verde-mato)">Endereço de entrega</h3>
 

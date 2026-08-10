@@ -6,6 +6,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// CSRF + rate-limit
+verify_csrf_from_request(true);
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+if (!rate_limit_check("reset:{$ip}", 5, 3600)) {
+    flash('reset_msg', 'Muitas solicitações. Tente novamente mais tarde.');
+    header('Location: ' . pageUrl('esqueci_senha.php'));
+    exit;
+}
+
 $email = trim(strtolower($_POST['email'] ?? ''));
 if ($email === '') {
     flash('reset_msg', 'Email inválido.');

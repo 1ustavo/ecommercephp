@@ -30,6 +30,123 @@ function baseUrl(): string
     return rtrim($dir, "/") ?: "";
 }
 
+/**
+ * CSRF helpers
+ */
+function csrf_token(): string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_input(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+/**
+ * Verifica CSRF a partir de POST body ou do header X-CSRF-Token (para JSON APIs).
+ * Se $exitOnFail=true, responde 403 e encerra a execução.
+ */
+function verify_csrf_from_request(bool $exitOnFail = true): bool
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $expected = $_SESSION['csrf_token'] ?? '';
+    $provided = '';
+
+    // Prefer header (for JSON requests)
+    $headers = [];
+    foreach (getallheaders() as $k => $v) {
+        $headers[strtolower($k)] = $v;
+    }
+    if (!empty($headers['x-csrf-token'])) {
+        $provided = $headers['x-csrf-token'];
+    } elseif (isset($_POST['csrf_token'])) {
+        $provided = $_POST['csrf_token'];
+    } else {
+        // Try JSON body
+        $raw = file_get_contents('php://input');
+        $data = @json_decode($raw, true);
+        if (is_array($data) && isset($data['csrf_token'])) {
+            $provided = $data['csrf_token'];
+        }
+    }
+
+    $ok = hash_equals((string) $expected, (string) $provided);
+
+    if (!$ok && $exitOnFail) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['sucesso' => false, 'erro' => 'Token CSRF inválido']);
+        exit;
+    }
+
+    return $ok;
+}
+
+/**
+ * Rate limiting using DB table rate_limits
+ * key: arbitrary string (e.g., "login:1.2.3.4" or "reset:email@example.com")
+ * limit: allowed requests per windowSeconds
+ */
+function rate_limit_check(string $key, int $limit, int $windowSeconds): bool
+{
+    global $pdo;
+
+    $now = new DateTime();
+    $nowStr = $now->format('Y-m-d H:i:s');
+
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare('SELECT id, count, window_start FROM rate_limits WHERE key_name = ? FOR UPDATE');
+        $stmt->execute([$key]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $insert = $pdo->prepare('INSERT INTO rate_limits (key_name, count, window_start) VALUES (?, ?, ?)');
+            $insert->execute([$key, 1, $nowStr]);
+            $pdo->commit();
+            return true;
+        }
+
+        $windowStart = new DateTime($row['window_start']);
+        $elapsed = $now->getTimestamp() - $windowStart->getTimestamp();
+
+        if ($elapsed > $windowSeconds) {
+            // reset window
+            $update = $pdo->prepare('UPDATE rate_limits SET count = 1, window_start = ? WHERE id = ?');
+            $update->execute([$nowStr, $row['id']]);
+            $pdo->commit();
+            return true;
+        }
+
+        if ($row['count'] + 1 > $limit) {
+            $pdo->commit();
+            return false;
+        }
+
+        $update = $pdo->prepare('UPDATE rate_limits SET count = count + 1 WHERE id = ?');
+        $update->execute([$row['id']]);
+        $pdo->commit();
+        return true;
+    } catch (Exception $e) {
+        try { $pdo->rollBack(); } catch (Exception $ee) {}
+        error_log('Rate limit error: ' . $e->getMessage());
+        // Fail-open: allow the request if DB fails
+        return true;
+    }
+}
+
 function asset(string $path): string
 {
     return baseUrl() . "/assets/" . ltrim($path, "/");
