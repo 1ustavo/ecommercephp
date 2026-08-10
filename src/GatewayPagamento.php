@@ -64,7 +64,7 @@ class GatewayPagamento
                 "payment_method_types" => ["card"],
                 "line_items" => $lineItems,
                 "mode" => "payment",
-                "success_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout.php?session_id={CHECKOUT_SESSION_ID}",
+                "success_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout_sucesso.php?session_id={CHECKOUT_SESSION_ID}",
                 "cancel_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout.php?cancel=1",
                 "metadata" => [
                     "pedido_id" => $pedido["id"],
