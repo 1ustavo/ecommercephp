@@ -127,6 +127,8 @@ class Pedido
             ")->execute([$adminId, $pedidoId]);
 
             $pdo->commit();
+            // Envia notificacao para o cliente
+            try { Notificacao::pedidoAprovado($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar aprovacao: ' . $e->getMessage()); }
             return true;
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -166,6 +168,9 @@ class Pedido
                 updated_at = NOW()
             WHERE id = ? AND status = 'AGUARDANDO_APROVACAO'
         ")->execute([$motivo, $adminId, $pedidoId]);
+
+        // Notifica o cliente sobre a recusa
+        try { Notificacao::pedidoRecusado($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar recusa: ' . $e->getMessage()); }
 
         return true;
     }

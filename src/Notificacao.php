@@ -125,4 +125,29 @@ class Notificacao
 
         self::enviarEmail($u["email"], $assunto, $corpo);
     }
+
+    /**
+     * Notifica cliente que o pagamento do pedido foi recebido.
+     */
+    public static function pedidoPago(int $pedidoId): void
+    {
+        global $pdo;
+
+        $pedido = Pedido::buscar($pedidoId);
+        if (!$pedido) {
+            return;
+        }
+
+        $usuario = $pdo->prepare("SELECT nome, email FROM usuarios WHERE id = ?");
+        $usuario->execute([$pedido["usuario_id"]]);
+        $u = $usuario->fetch();
+        if (!$u || empty($u["email"])) {
+            return;
+        }
+
+        $assunto = "Pagamento recebido — Pedido #{$pedidoId} — EcoShop";
+        $corpo = self::templateHtml("Pagamento recebido", '<p>Recebemos o pagamento do seu pedido <strong>#' . (int) $pedidoId . '</strong>.</p><p><strong>Total:</strong> ' . formatarMoeda((float) $pedido["total"]) . '</p><p>Em breve o pedido será analisado para aprovação e envio.</p>');
+
+        self::enviarEmail($u["email"], $assunto, $corpo);
+    }
 }

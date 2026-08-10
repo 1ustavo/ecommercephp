@@ -200,6 +200,7 @@ class GatewayPagamento
                     $pedidoId = (int) ($session->metadata->pedido_id ?? 0);
                     if ($pedidoId) {
                         Pedido::confirmarPagamento($pedidoId);
+                        try { Notificacao::pedidoPago($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar pagamento: ' . $e->getMessage()); }
                         return true;
                     }
                 }
@@ -216,6 +217,7 @@ class GatewayPagamento
             $pedidoId = (int) ($payload["metadata"]["pedido_id"] ?? 0);
             if ($pedidoId && ($payload["status"] ?? "") === "approved") {
                 Pedido::confirmarPagamento($pedidoId);
+                try { Notificacao::pedidoPago($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar pagamento MP: ' . $e->getMessage()); }
                 return true;
             }
         }
