@@ -64,13 +64,25 @@ class GatewayPagamento
                 "payment_method_types" => ["card"],
                 "line_items" => $lineItems,
                 "mode" => "payment",
-                "success_url" => "https://seusite.com/checkout/sucesso?session_id={CHECKOUT_SESSION_ID}",
-                "cancel_url" => "https://seusite.com/checkout/cancelado",
+                "success_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout.php?session_id={CHECKOUT_SESSION_ID}",
+                "cancel_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout.php?cancel=1",
                 "metadata" => [
                     "pedido_id" => $pedido["id"],
                     "usuario_id" => $pedido["usuario_id"],
                 ],
             ]);
+
+            // Persiste registro de pagamento localmente para auditoria
+            try {
+                global $pdo;
+                $stmt = $pdo->prepare("INSERT INTO payments (pedido_id, gateway, stripe_session_id, stripe_payment_intent_id, amount_cents, currency, status, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, NOW())");
+                $amount = isset($session->amount_total) ? (int) $session->amount_total : null;
+                $currency = isset($session->currency) ? $session->currency : 'brl';
+                $metadata = json_encode($session->metadata ?? []);
+                $stmt->execute([$pedido['id'], 'stripe', $session->id ?? null, $session->payment_intent ?? null, $amount, $currency, $session->payment_status ?? null, $metadata]);
+            } catch (Exception $e) {
+                error_log('Erro ao registrar payment local: ' . $e->getMessage());
+            }
 
             return $session->url;
         } catch (Exception $e) {
