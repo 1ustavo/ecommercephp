@@ -16,9 +16,47 @@ class Notificacao
             return self::logEmail($para, $assunto, $corpoHtml);
         }
 
-        $de = getenv("MAIL_FROM") ?: "no-reply@ecoshop.com.br";
+        // Se variáveis SMTP estiverem presentes, usar PHPMailer
+        $smtpHost = getenv('MAIL_HOST') ?: '';
+        $smtpPort = getenv('MAIL_PORT') ?: '';
+        $smtpUser = getenv('MAIL_USERNAME') ?: '';
+        $smtpPass = getenv('MAIL_PASSWORD') ?: '';
+        $smtpSecure = getenv('MAIL_SECURE') ?: 'tls';
+        $from = getenv('MAIL_FROM') ?: 'no-reply@ecoshop.com.br';
+        $fromName = getenv('MAIL_FROM_NAME') ?: 'EcoShop';
+
+        if ($smtpHost && class_exists('\PHPMailer\PHPMailer\PHPMailer')) {
+            try {
+                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                // Servidor SMTP
+                $mail->isSMTP();
+                $mail->Host = $smtpHost;
+                $mail->SMTPAuth = ($smtpUser !== '');
+                if ($smtpUser !== '') {
+                    $mail->Username = $smtpUser;
+                    $mail->Password = $smtpPass;
+                }
+                $mail->SMTPSecure = $smtpSecure;
+                if (is_numeric($smtpPort)) $mail->Port = (int) $smtpPort;
+
+                $mail->setFrom($from, $fromName);
+                $mail->addAddress($para);
+                $mail->isHTML(true);
+                $mail->Subject = $assunto;
+                $mail->Body = $corpoHtml;
+
+                $mail->send();
+                return true;
+            } catch (\PHPMailer\PHPMailer\Exception $e) {
+                error_log('PHPMailer error: ' . $e->getMessage());
+                return self::logEmail($para, $assunto, $corpoHtml);
+            }
+        }
+
+        // Fallback para mail() nativo
+        $de = $from;
         $headers = [
-            "From: EcoShop <" . $de . ">",
+            "From: {$fromName} <" . $de . ">",
             "Reply-To: " . $de,
             "Content-Type: text/html; charset=UTF-8",
             "X-Mailer: PHP/" . phpversion(),
