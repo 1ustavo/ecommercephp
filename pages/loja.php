@@ -72,8 +72,12 @@ require __DIR__ . "/../includes/header.php";
     <div class="card-grid">
         <?php foreach ($produtos as $p): ?>
             <a href="<?= pageUrl("produto.php?slug=" . urlencode($p["slug"])) ?>" class="product-card">
-                <div class="product-img" style="background:<?= corPlaceholder($p["slug"]) ?>">
-                
+                <div class="product-img">
+                    <?php if (!empty($p["imagem"]) && !str_starts_with($p["imagem"], 'placeholder:')): ?>
+                        <img src="<?= baseUrl() . '/' . $p["imagem"] ?>" alt="<?= e($p["nome"]) ?>">
+                    <?php else: ?>
+                        <div style="background:<?= corPlaceholder($p["slug"]) ?>;width:100%;height:100%"></div>
+                    <?php endif; ?>
                 </div>
                 <div class="product-body">
                     <div class="product-category"><?= e($p["categoria_nome"]) ?></div>

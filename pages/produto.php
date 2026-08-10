@@ -23,7 +23,13 @@ require __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="product-detail">
-    <div class="product-detail-img" style="background:<?= corPlaceholder($produto["slug"]) ?>">
+    <div class="product-detail-img">
+        <?php $imgs = Produto::imagens((int) $produto["id"]); $imgUrl = $imgs[0]["url"] ?? null; ?>
+        <?php if ($imgUrl && !str_starts_with($imgUrl, 'placeholder:')): ?>
+            <img src="<?= baseUrl() . '/' . $imgUrl ?>" alt="<?= e($produto['nome']) ?>">
+        <?php else: ?>
+            <div style="background:<?= corPlaceholder($produto["slug"]) ?>;width:100%;height:100%"></div>
+        <?php endif; ?>
     </div>
     <div>
         <div class="product-category"><?= e($produto["categoria_nome"]) ?></div>
