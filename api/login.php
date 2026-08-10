@@ -18,8 +18,8 @@ if ($email === "" || $password === "") {
 $auth = new Auth();
 
 if ($auth->login($email, $password)) {
-    header("Location: " . pageUrl("loja.php"));
-    exit;
+    // Redirect based on role (admin -> admin dashboard, cliente -> loja)
+    $auth->redirectPosLogin();
 }
 
 header("Location: ../index.php?erro=credenciais");
