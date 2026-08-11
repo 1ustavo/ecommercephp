@@ -11,6 +11,8 @@ $cupons = Cupom::todosAdmin();
 
 <h1 class="page-title">Cupons de Desconto</h1>
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div style="margin-bottom:16px">
     <button type="button" class="btn btn-primary" id="btn-novo-cupom">Novo Cupom</button>
 </div>

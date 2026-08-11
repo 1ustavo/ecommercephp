@@ -24,6 +24,8 @@ $sucesso = isset($_GET["sucesso"]);
     <div class="alert alert-error">Preencha e-mail e senha.</div>
 <?php elseif ($erro === "credenciais"): ?>
     <div class="alert alert-error">E-mail ou senha inválidos.</div>
+<?php elseif ($erro === "rate_limit"): ?>
+    <div class="alert alert-error">Muitas tentativas de login. Tente novamente em alguns minutos.</div>
 <?php endif; ?>
 
 <form class="auth-form" action="<?= apiUrl("login.php") ?>" method="post">
@@ -41,6 +43,9 @@ $sucesso = isset($_GET["sucesso"]);
 
 <p style="margin-top:16px">
     Ainda não tem conta? <a href="<?= pageUrl("cadastro.php") ?>">Cadastre-se aqui</a>.
+</p>
+<p style="margin-top:8px">
+    <a href="<?= pageUrl("esqueci_senha.php") ?>">Esqueci minha senha</a>
 </p>
 
 <?php require __DIR__ . "/../includes/footer.php"; ?>

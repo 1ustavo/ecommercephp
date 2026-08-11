@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const apiEndpoint = "../api/carrinho.php";
+    const csrfToken = document.getElementById("csrf-token-cart")?.value || "";
 
     function showToast(message, type = "error") {
         const existing = document.querySelector(".toast");
@@ -40,13 +41,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // API helpers
     async function request(action, body) {
+        const payload = { ...body, csrf_token: csrfToken };
         const response = await fetch(`${apiEndpoint}?action=${encodeURIComponent(action)}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "X-CSRF-Token": csrfToken,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(payload),
         });
 
         // Retorna o JSON mesmo em respostas de erro (ex: 400) para que

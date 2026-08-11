@@ -22,6 +22,9 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+// CSRF protection
+verify_csrf_from_request(true);
+
 $codigo = strtoupper(trim($_POST["cupom"] ?? ""));
 $subtotal = (float) ($_POST["subtotal"] ?? 0);
 $frete = (float) ($_POST["frete"] ?? 0);

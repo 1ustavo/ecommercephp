@@ -1,0 +1,12 @@
+# Bloquear execução de scripts PHP no diretório de uploads
+php_flag engine off
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phps .cgi .pl .py .asp .aspx .sh .bash
+
+# Impedir listagem de diretório
+Options -Indexes
+
+# Forçar download de arquivos executáveis
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|py|asp|aspx|sh|bash)$">
+    ForceType application/octet-stream
+    Header set Content-Disposition attachment
+</FilesMatch>

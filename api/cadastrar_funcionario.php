@@ -4,6 +4,12 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require_once __DIR__ . "/../config/bootstrap.php";
 
+// Guard de admin para API
+requererAdminApi();
+
+// CSRF protection
+verify_csrf_from_request(true);
+
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);
 

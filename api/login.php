@@ -11,7 +11,7 @@ $email = trim($_POST["email"] ?? "");
 $password = $_POST["password"] ?? "";
 
 if ($email === "" || $password === "") {
-    header("Location: ../index.php?erro=campos");
+    header("Location: " . pageUrl("login.php") . "?erro=campos");
     exit;
 }
 
@@ -21,7 +21,7 @@ $auth = new Auth();
 verify_csrf_from_request(true);
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 if (!rate_limit_check("login:{$ip}", 5, 60)) {
-    header("Location: ../index.php?erro=rate_limit");
+    header("Location: " . pageUrl("login.php") . "?erro=rate_limit");
     exit;
 }
 
@@ -30,5 +30,5 @@ if ($auth->login($email, $password)) {
     $auth->redirectPosLogin();
 }
 
-header("Location: ../index.php?erro=credenciais");
+header("Location: " . pageUrl("login.php") . "?erro=credenciais");
 exit;

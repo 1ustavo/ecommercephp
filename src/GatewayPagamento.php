@@ -1,5 +1,5 @@
 <?php
-//erro
+
 class GatewayPagamento
 {
     private static ?string $stripeSecret = null;
@@ -237,4 +237,3 @@ class GatewayPagamento
         return false;
     }
 }
-//</arg_value></tool_call>

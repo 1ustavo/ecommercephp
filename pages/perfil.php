@@ -8,6 +8,9 @@ $usuarioId = (int) $_SESSION["usuario_id"];
 $enderecos = Endereco::porUsuario($usuarioId);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // CSRF protection
+    verify_csrf_from_request(true);
+
     $dados = [
         "titulo" => trim($_POST["titulo"] ?? "Casa"),
         "cep" => trim($_POST["cep"] ?? ""),
@@ -76,6 +79,7 @@ $sucesso = flash("perfil_success");
     <div class="card">
         <h2>Adicionar novo endereço</h2>
         <form method="post">
+            <?= csrf_input() ?>
             <div class="form-group">
                 <label class="form-label">Título</label>
                 <input type="text" name="titulo" class="form-control" value="Casa" required>

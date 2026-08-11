@@ -10,7 +10,6 @@ verify_csrf_from_request(true);
 
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $pedidoId = isset($input['pedido_id']) ? (int) $input['pedido_id'] : 0;
-action:
 $action = trim($input['action'] ?? '');
 
 if (!$pedidoId || $action === '') {

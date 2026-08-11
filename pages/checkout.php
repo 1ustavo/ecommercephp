@@ -31,6 +31,8 @@ require __DIR__ . "/../includes/header.php";
 
 <h1 class="page-title">Finalizar Compra</h1>
 
+<input type="hidden" id="csrf-token-checkout" value="<?= e(csrf_token()) ?>">
+
 <?php $checkoutError = flash("checkout_error"); ?>
 <?php if ($checkoutError): ?>
     <div class="alert alert-error"><?= e($checkoutError) ?></div>

@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const csrfToken = document.getElementById("csrf-token-checkout")?.value || "";
     const panels = Array.from(document.querySelectorAll(".checkout-panel"));
     const steps = Array.from(document.querySelectorAll(".step"));
     const nextButtons = Array.from(document.querySelectorAll(".btn-next"));
@@ -171,8 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "X-CSRF-Token": csrfToken,
             },
-            body: JSON.stringify({ cupom: codigo }),
+            body: JSON.stringify({ cupom: codigo, csrf_token: csrfToken }),
         })
             .then((res) => res.json())
             .then((data) => {

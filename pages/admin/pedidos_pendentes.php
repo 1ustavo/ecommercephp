@@ -41,6 +41,8 @@ $stats = Pedido::estatisticas();
     </div>
 </div>
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div id="lista-pendentes">
     <?php if (empty($pendentes)): ?>
         <div class="empty-state">

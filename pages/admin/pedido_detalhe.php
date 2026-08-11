@@ -82,10 +82,14 @@ require __DIR__ . "/../../includes/admin-header.php";
 const pedidoId = <?= (int) $pedido['id'] ?>;
 
 async function postAction(action, body = {}){
+    const csrfToken = '<?= e(csrf_token()) ?>';
     const res = await fetch('<?= apiUrl("admin/pedido_status.php") ?>', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({ pedido_id: pedidoId, action }, body))
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(Object.assign({ pedido_id: pedidoId, action, csrf_token: csrfToken }, body))
     });
     return res.json();
 }

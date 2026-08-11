@@ -6,6 +6,9 @@ require_once __DIR__ . "/../../config/bootstrap.php";
 $auth = new Auth();
 $auth->verificarAdmin();
 
+// CSRF protection
+verify_csrf_from_request(true);
+
 // Aceita apenas POST
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);

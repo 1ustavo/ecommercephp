@@ -467,6 +467,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("form-produto");
 
     if (form) {
+        // Adiciona o token CSRF ao FormData antes do envio
+        const csrfToken = document.getElementById("csrf-token")?.value || "";
+
         form.addEventListener("submit", function (e) {
             e.preventDefault();
 
@@ -512,6 +515,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Coleta dados do formulário usando FormData (suporta upload de arquivos)
             const formData = new FormData(form);
+            if (csrfToken) {
+                formData.append("csrf_token", csrfToken);
+            }
 
             // Feedback de loading no botão
             const btnSalvar = document.getElementById("btn-salvar");
@@ -600,14 +606,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function enviarMensagemTicket(ticketId, mensagem) {
         // Envia mensagem via API real
+        const csrfToken = document.getElementById("csrf-token")?.value || "";
         return fetch("../../api/admin/responder_ticket.php", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
             },
             body: JSON.stringify({
                 ticket_id: ticketId,
                 mensagem: mensagem,
+                csrf_token: csrfToken,
             }),
         })
         .then((response) => response.json())

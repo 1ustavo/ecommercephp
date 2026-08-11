@@ -4,6 +4,9 @@ require_once __DIR__ . "/../../config/bootstrap.php";
 
 requererAdminApi();
 
+// CSRF protection
+verify_csrf_from_request(true);
+
 header("Content-Type: application/json; charset=utf-8");
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -20,7 +23,6 @@ if ($id <= 0) {
     exit;
 }
 
-$cupom = Cupom::buscarPorCodigo("");
 // Busca diretamente para pegar o código
 $stmt = $pdo->prepare("SELECT * FROM cupons WHERE id = ?");
 $stmt->execute([$id]);

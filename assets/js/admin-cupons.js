@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const modalTitulo = document.getElementById("modal-titulo");
     const btnNovo = document.getElementById("btn-novo-cupom");
     const btnCancelar = document.getElementById("btn-cancelar");
+    const csrfToken = document.getElementById("csrf-token")?.value || "";
 
     function caminhoApi(arquivo) {
         return "../../api/admin/" + arquivo;
@@ -64,6 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
         formData.append("data_fim", fim);
         formData.append("ativo", ativo ? "1" : "0");
         if (id) formData.append("id", id);
+        if (csrfToken) formData.append("csrf_token", csrfToken);
 
         fetch(caminhoApi("salvar_cupom.php"), {
             method: "POST",
@@ -89,8 +91,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const id = this.getAttribute("data-id");
             fetch(caminhoApi("salvar_cupom.php"), {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "id=" + encodeURIComponent(id),
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: "id=" + encodeURIComponent(id) + "&csrf_token=" + encodeURIComponent(csrfToken),
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -124,6 +129,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const formData = new FormData();
             formData.append("id", id);
+            if (csrfToken) formData.append("csrf_token", csrfToken);
 
             fetch(caminhoApi("excluir_cupom.php"), {
                 method: "POST",

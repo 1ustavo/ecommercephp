@@ -6,6 +6,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// CSRF protection
+verify_csrf_from_request(true);
+
 $token = trim($_POST['token'] ?? '');
 $senha = $_POST['senha'] ?? '';
 $senhaConfirm = $_POST['senha_confirm'] ?? '';

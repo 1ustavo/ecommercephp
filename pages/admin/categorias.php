@@ -11,6 +11,8 @@ $categorias = Categoria::todasAdmin();
 
 <h1 class="page-title">Categorias</h1>
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div style="margin-bottom:16px">
     <button type="button" class="btn btn-primary" id="btn-nova-categoria">Nova Categoria</button>
 </div>

@@ -149,16 +149,31 @@ function rate_limit_check(string $key, int $limit, int $windowSeconds): bool
 
 function asset(string $path): string
 {
+    $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+    if ($appUrl !== '') {
+        return $appUrl . '/assets/' . ltrim($path, '/');
+    }
+
     return baseUrl() . "/assets/" . ltrim($path, "/");
 }
 
 function pageUrl(string $path): string
 {
+    $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+    if ($appUrl !== '') {
+        return $appUrl . '/pages/' . ltrim($path, '/');
+    }
+
     return baseUrl() . "/pages/" . ltrim($path, "/");
 }
 
 function apiUrl(string $path): string
 {
+    $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+    if ($appUrl !== '') {
+        return $appUrl . '/api/' . ltrim($path, '/');
+    }
+
     return baseUrl() . "/api/" . ltrim($path, "/");
 }
 
@@ -195,7 +210,30 @@ function requererAdminApi(): void
         exit;
     }
 
-    // 2) Autorizacao: precisa ser admin/gerente/funcionario
+    // 2) Sessão rigorosa: timeout de inatividade (30 min)
+    $timeout = 1800;
+    if (isset($_SESSION["last_activity"]) && (time() - $_SESSION["last_activity"] > $timeout)) {
+        http_response_code(401);
+        echo json_encode([
+            "sucesso" => false,
+            "erro" => "Sessao expirada por inatividade. Faca login novamente.",
+        ]);
+        exit;
+    }
+    $_SESSION["last_activity"] = time();
+
+    // 3) Valida fingerprint do navegador (User-Agent)
+    $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? "";
+    if (isset($_SESSION["user_agent"]) && $_SESSION["user_agent"] !== $userAgent) {
+        http_response_code(401);
+        echo json_encode([
+            "sucesso" => false,
+            "erro" => "Sessao invalida. Faca login novamente.",
+        ]);
+        exit;
+    }
+
+    // 4) Autorizacao: precisa ser admin/gerente/funcionario
     if (!isAdmin()) {
         http_response_code(403);
         echo json_encode([

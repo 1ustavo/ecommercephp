@@ -41,6 +41,7 @@ require __DIR__ . "/../includes/header.php";
         </p>
 
         <form id="form-add-cart" action="<?= apiUrl("carrinho.php") ?>?action=adicionar" method="post" data-produto-id="<?= (int) $produto["id"] ?>" data-estoque="<?= (int) $produto["estoque"] ?>">
+            <?= csrf_input() ?>
             <input type="hidden" name="produto_id" value="<?= (int) $produto["id"] ?>">
             <?php if (!empty($variacoes)): ?>
                 <div class="variation-group">

@@ -7,6 +7,9 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+// CSRF protection — todas as ações do carrinho exigem token válido
+verify_csrf_from_request(true);
+
 $action = $_GET["action"] ?? $_POST["action"] ?? null;
 $isJson = str_contains($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") ||
     strtolower($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "xmlhttprequest";

@@ -29,7 +29,12 @@ $currentAdminPage = $currentAdminPage ?? "";
         <nav aria-label="Navegação administrativa">
             <ul class="nav-links">
                 <li><a href="<?= pageUrl("loja.php") ?>">Ver Loja</a></li>
-                <li><a href="<?= apiUrl("logout.php") ?>" class="nav-logout">Sair</a></li>
+                <li>
+                    <form action="<?= apiUrl("logout.php") ?>" method="post" style="display:inline">
+                        <?= csrf_input() ?>
+                        <button type="submit" class="nav-logout btn-link">Sair</button>
+                    </form>
+                </li>
             </ul>
         </nav>
     </div>

@@ -24,6 +24,7 @@ $erro = $_GET["erro"] ?? null;
 <?php endif; ?>
 
 <form class="auth-form" action="<?= apiUrl("cadastrar_cliente.php") ?>" method="post">
+    <?= csrf_input() ?>
     <div class="form-group">
         <label class="form-label">Nome completo</label>
         <input type="text" name="nome" class="form-control" required>

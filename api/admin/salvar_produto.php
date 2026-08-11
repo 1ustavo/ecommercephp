@@ -5,6 +5,9 @@ require_once __DIR__ . "/../../config/bootstrap.php";
 $auth = new Auth();
 $auth->verificarAdmin();
 
+// CSRF protection
+verify_csrf_from_request(true);
+
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);
     echo json_encode(["sucesso" => false, "erro" => "Método não permitido."]);
@@ -130,22 +133,42 @@ try {
                 continue;
             }
 
-            // Valida tipo de arquivo
+            // --- VALIDAÇÕES DE SEGURANÇA DE UPLOAD ---
+
+            // 1) Valida MIME real via mime_content_type
             $mime = mime_content_type($arquivo["tmp_name"]);
-            $permitidos = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-            if (!in_array($mime, $permitidos, true)) {
+            $permitidosMime = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+            if (!in_array($mime, $permitidosMime, true)) {
                 continue;
             }
 
-            // Valida tamanho (máx 5MB)
+            // 2) Valida extensão do arquivo (nunca confiar apenas no MIME)
+            $extensao = strtolower(pathinfo($arquivo["name"], PATHINFO_EXTENSION));
+            $permitidosExt = ["jpg", "jpeg", "png", "webp", "gif"];
+            if (!in_array($extensao, $permitidosExt, true)) {
+                continue;
+            }
+
+            // 3) Valida que é uma imagem real (abre e verifica dimensões)
+            $imgInfo = @getimagesize($arquivo["tmp_name"]);
+            if ($imgInfo === false || $imgInfo[0] <= 0 || $imgInfo[1] <= 0) {
+                continue;
+            }
+
+            // 4) Valida tamanho (máx 5MB)
             if ($arquivo["size"] > 5 * 1024 * 1024) {
                 continue;
             }
 
-            // Gera nome único
-            $extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
-            $nomeArquivo = "produto_" . $produtoId . "_" . $imagemIndex . "_" . bin2hex(random_bytes(8)) . "." . $extensao;
+            // 5) Gera nome 100% seguro (sem usar nome do usuário)
+            $nomeArquivo = "produto_" . $produtoId . "_" . $imagemIndex . "_" . bin2hex(random_bytes(16)) . ".{$extensao}";
             $caminho = $uploadDir . $nomeArquivo;
+
+            // 6) Garante que o diretório de destino não permite execução PHP via .htaccess
+            $htaccess = $uploadDir . ".htaccess";
+            if (!file_exists($htaccess)) {
+                @file_put_contents($htaccess, "php_flag engine off\nRemoveHandler .php .phtml .php3 .php4 .php5 .php7\n");
+            }
 
             if (move_uploaded_file($arquivo["tmp_name"], $caminho)) {
                 $url = "uploads/produtos/" . $nomeArquivo;

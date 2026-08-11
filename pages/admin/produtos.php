@@ -52,6 +52,8 @@ function valorCampo(?array $produto, string $campo): string
 
 <link rel="stylesheet" href="<?= asset("css/admin-produtos.css") ?>">
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div class="produto-form">
     <!-- ============================================================
          CABEÇALHO DO FORMULÁRIO

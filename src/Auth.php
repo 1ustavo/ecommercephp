@@ -26,10 +26,17 @@ class Auth
         }
 
         $this->iniciarSessao();
+
+        // Sessão rigorosa: regenera ID e registra fingerprint do navegador
+        session_regenerate_id(true);
         $_SESSION["usuario_id"] = $usuario["id"];
         $_SESSION["usuario_nome"] = $usuario["nome"];
         $_SESSION["email"] = $usuario["email"];
         $_SESSION["cargo"] = $usuario["cargo"];
+        $_SESSION["login_time"] = time();
+        $_SESSION["last_activity"] = time();
+        $_SESSION["user_agent"] = $_SERVER["HTTP_USER_AGENT"] ?? "";
+        $_SESSION["ip_address"] = $_SERVER["REMOTE_ADDR"] ?? "";
 
         // Registra auditoria de login
         try {
@@ -60,6 +67,30 @@ class Auth
         if (!isset($_SESSION["usuario_id"])) {
             header("Location: " . pageUrl("login.php"));
             exit;
+        }
+
+        // --- SESSÃO RIGOROSA ---
+
+        // 1) Timeout de inatividade (30 min)
+        $timeout = 1800; // 30 minutos
+        if (isset($_SESSION["last_activity"]) && (time() - $_SESSION["last_activity"] > $timeout)) {
+            $this->logout();
+            return;
+        }
+        $_SESSION["last_activity"] = time();
+
+        // 2) Valida fingerprint do navegador (User-Agent)
+        $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? "";
+        if (isset($_SESSION["user_agent"]) && $_SESSION["user_agent"] !== $userAgent) {
+            $this->logout();
+            return;
+        }
+
+        // 3) Valida IP (apenas se não for localhost/desenvolvimento)
+        $ip = $_SERVER["REMOTE_ADDR"] ?? "";
+        if (isset($_SESSION["ip_address"]) && $_SESSION["ip_address"] !== $ip && $ip !== "127.0.0.1" && $ip !== "::1") {
+            $this->logout();
+            return;
         }
     }
 

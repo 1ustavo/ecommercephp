@@ -39,7 +39,12 @@ $nomeUsuario = e($_SESSION["usuario_nome"] ?? "");
                     <?php if (isAdmin()): ?>
                         <li><a href="<?= pageUrl("admin/dashboard.php") ?>">Admin</a></li>
                     <?php endif; ?>
-                    <li><a href="<?= apiUrl("logout.php") ?>" class="nav-logout">Sair</a></li>
+                    <li>
+                        <form action="<?= apiUrl("logout.php") ?>" method="post" style="display:inline">
+                            <?= csrf_input() ?>
+                            <button type="submit" class="nav-logout btn-link">Sair</button>
+                        </form>
+                    </li>
                 <?php else: ?>
                     <li><a href="<?= pageUrl("login.php") ?>" class="btn btn-outline btn-sm nav-auth-btn">Entrar</a></li>
                     <li><a href="<?= pageUrl("cadastro.php") ?>" class="btn btn-primary btn-sm nav-auth-btn">Cadastrar</a></li>

@@ -16,6 +16,8 @@ require __DIR__ . "/../includes/header.php";
 
 <h1 class="page-title">Carrinho</h1>
 
+<input type="hidden" id="csrf-token-cart" value="<?= e(csrf_token()) ?>">
+
 <?php if (isset($_GET["sucesso"])): ?>
     <div class="alert alert-success">Item atualizado no carrinho.</div>
 <?php elseif (isset($_GET["erro"])): ?>
