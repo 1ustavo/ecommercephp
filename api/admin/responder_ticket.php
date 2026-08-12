@@ -2,9 +2,8 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Proteção: apenas admin pode acessar
-$auth = new Auth();
-$auth->verificarAdmin();
+// Proteção: apenas admin pode acessar (retorna JSON 401/403, não redirect)
+requererAdminApi();
 
 // CSRF protection
 verify_csrf_from_request(true);
@@ -41,8 +40,23 @@ if ($mensagem === "") {
 $usuarioId = (int) ($_SESSION["usuario_id"] ?? 0);
 
 try {
+    // Verifica se o ticket existe antes de inserir mensagem (IDOR fix)
+    $ticket = Ticket::buscarPorId($ticketId);
+    if (!$ticket) {
+        http_response_code(404);
+        echo json_encode(["sucesso" => false, "erro" => "Ticket não encontrado."]);
+        exit;
+    }
+
+    // Verifica se o ticket está fechado
+    if ($ticket["status"] === "FECHADO") {
+        http_response_code(422);
+        echo json_encode(["sucesso" => false, "erro" => "Este chamado está fechado."]);
+        exit;
+    }
+
     // Adiciona mensagem do admin e atualiza status para EM_ANDAMENTO
-    Produto::adicionarMensagemTicket($ticketId, $usuarioId, $mensagem, "ADMIN");
+    Ticket::adicionarMensagem($ticketId, $usuarioId, $mensagem, "ADMIN");
 
     // Registra auditoria
     registrarAuditoria(

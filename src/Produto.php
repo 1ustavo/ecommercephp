@@ -391,10 +391,11 @@ class Produto
         global $pdo;
 
         $stmt = $pdo->prepare("
-            SELECT t.*, u.nome AS cliente_nome, u.email AS cliente_email
+            SELECT DISTINCT t.*, u.nome AS cliente_nome, u.email AS cliente_email
             FROM tickets t
+            INNER JOIN pedido_itens pi ON pi.pedido_id = t.pedido_id
             LEFT JOIN usuarios u ON u.id = t.usuario_id
-            WHERE t.produto_id = ?
+            WHERE pi.produto_id = ?
             ORDER BY t.created_at DESC
         ");
         $stmt->execute([$produtoId]);

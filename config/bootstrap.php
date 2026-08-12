@@ -87,6 +87,7 @@ require_once __DIR__ . "/../src/Notificacao.php";
 require_once __DIR__ . "/../src/Cache.php";
 require_once __DIR__ . "/../src/Queue.php";
 require_once __DIR__ . "/../src/GatewayPagamento.php";
+require_once __DIR__ . "/../src/Ticket.php";
 
 Cache::init();
 Queue::init();

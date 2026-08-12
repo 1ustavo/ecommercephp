@@ -51,5 +51,6 @@ $currentAdminPage = $currentAdminPage ?? "";
         <a href="<?= pageUrl("admin/pedidos.php") ?>" class="<?= $currentAdminPage === "pedidos" ? "active" : "" ?>">Pedidos</a>
         <a href="<?= pageUrl("admin/relatorios.php") ?>" class="<?= $currentAdminPage === "relatorios" ? "active" : "" ?>">Relatórios</a>
         <a href="<?= pageUrl("admin/auditoria.php") ?>" class="<?= $currentAdminPage === "auditoria" ? "active" : "" ?>">Auditoria</a>
+        <a href="<?= pageUrl("admin/tickets.php") ?>" class="<?= $currentAdminPage === "tickets" ? "active" : "" ?>">Tickets SAC</a>
     </aside>
     <div class="admin-content">

@@ -405,6 +405,9 @@ function registrarAuditoria(
         $usuarioId = $_SESSION["usuario_id"] ?? null;
         $usuarioNome = $_SESSION["usuario_nome"] ?? null;
 
+        // Mascara dados sensíveis na descrição antes de gravar
+        $descricaoSegura = mascararDadosSensiveis($descricao);
+
         $stmt = $pdo->prepare("
             INSERT INTO audit_logs (usuario_id, usuario_nome, acao, entidade, entidade_id, descricao, ip, user_agent)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -415,13 +418,31 @@ function registrarAuditoria(
             $acao,
             $entidade,
             $entidadeId,
-            $descricao,
+            $descricaoSegura,
             $_SERVER["REMOTE_ADDR"] ?? null,
             substr($_SERVER["HTTP_USER_AGENT"] ?? "", 0, 500),
         ]);
     } catch (PDOException $e) {
         error_log("Erro ao registrar auditoria: " . $e->getMessage());
     }
+}
+
+/**
+ * Mascara dados sensíveis em strings de log/auditoria.
+ * Mascara CPF (11 dígitos), telefone (10-11 dígitos) e e-mails.
+ */
+function mascararDadosSensiveis(string $texto): string
+{
+    // Mascara CPF: 123.456.789-01 -> ***.***.***-**
+    $texto = preg_replace('/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/', '***.***.***-**', $texto);
+
+    // Mascara telefone: (11) 98765-4321 -> (**) *****-****
+    $texto = preg_replace('/\b(\+?\d{2})?\s?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b/', '(**) *****-****', $texto ?? "");
+
+    // Mascara e-mail: fulano@exemplo.com -> ***@***.***
+    $texto = preg_replace('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '***@***.***', $texto ?? "");
+
+    return $texto ?? "";
 }
 
 /**

@@ -76,6 +76,7 @@ class Notificacao
 
     /**
      * Registra o email em arquivo de log para debug/teste.
+     * Dados sensíveis (e-mail completo, corpo com CPF/telefone) são mascarados.
      */
     private static function logEmail(string $para, string $assunto, string $corpoHtml): bool
     {
@@ -87,12 +88,25 @@ class Notificacao
         $logFile = $logDir . "/emails.log";
         $data = date("Y-m-d H:i:s");
         $separator = str_repeat("=", 80);
+
+        // Mascara o e-mail: jo***@ex***.com
+        $partes = explode("@", $para);
+        $emailMascarado = (count($partes) === 2) ? "***@" . $partes[1] : "***";
+
+        // Mascara CPF (11 dígitos), telefone (10-11 dígitos) e e-mails no corpo
+        $corpoMascarado = preg_replace('/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/', '***.***.***-**', $corpoHtml);
+        $corpoMascarado = preg_replace('/\b(\+?\d{2})?\s?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b/', '(**) *****-****', $corpoMascarado ?? $corpoHtml);
+        $corpoMascarado = preg_replace('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '***@***.***', $corpoMascarado ?? $corpoHtml);
+
+        // Não grava o corpo HTML completo — apenas um resumo seguro
+        $resumo = strip_tags($corpoMascarado ?? "");
+        $resumo = mb_substr($resumo, 0, 200);
+
         $linhas = [
             $separator,
-            "[{$data}] PARA: {$para}",
+            "[{$data}] PARA: {$emailMascarado}",
             "ASSUNTO: {$assunto}",
-            $separator,
-            $corpoHtml,
+            "RESUMO: {$resumo}",
             $separator,
             "",
         ];

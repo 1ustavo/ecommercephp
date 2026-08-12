@@ -81,6 +81,20 @@ if (!empty($erros)) {
     exit;
 }
 
+// Whitelist de campos permitidos (mass assignment fix)
+$camposPermitidos = [
+    "categoria_id", "nome", "slug", "descricao", "descricao_curta",
+    "preco", "estoque", "ativo", "ean", "sku", "ncm",
+    "meta_titulo", "meta_descricao",
+    "palavras_chave_principais", "palavras_chave_secundarias",
+];
+
+// Remove qualquer campo extra que não esteja na whitelist
+$dados = array_intersect_key($dados, array_flip($camposPermitidos));
+
+// Valida campo ativo explicitamente (não confia em null)
+$ativo = isset($dados["ativo"]) ? (bool) $dados["ativo"] : true;
+
 $dadosProduto = [
     "categoria_id" => isset($dados["categoria_id"]) ? (int) $dados["categoria_id"] : null,
     "nome" => $nome,
@@ -89,7 +103,7 @@ $dadosProduto = [
     "descricao_curta" => trim($dados["descricao_curta"] ?? ""),
     "preco" => $preco,
     "estoque" => $estoque,
-    "ativo" => (bool) ($dados["ativo"] ?? true),
+    "ativo" => $ativo,
     "ean" => $eanLimpo,
     "sku" => $sku,
     "ncm" => $ncm !== "" ? preg_replace("/[\s.-]/", "", $ncm) : null,

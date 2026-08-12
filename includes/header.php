@@ -32,6 +32,7 @@ $nomeUsuario = e($_SESSION["usuario_nome"] ?? "");
                 </li>
                 <?php if ($logado): ?>
                     <li><a href="<?= pageUrl("pedidos.php") ?>">Pedidos</a></li>
+                    <li><a href="<?= pageUrl("meus_tickets.php") ?>">Meus Tickets</a></li>
                     <li><a href="<?= pageUrl("perfil.php") ?>" class="nav-user">
                         <span class="nav-user-avatar" aria-hidden="true"><?= mb_strtoupper(mb_substr($nomeUsuario, 0, 1)) ?></span>
                         <?= $nomeUsuario ?>

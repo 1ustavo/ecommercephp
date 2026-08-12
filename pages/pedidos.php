@@ -66,7 +66,39 @@ $error = flash("checkout_error");
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <a href="<?= pageUrl("pedidos.php") ?>" class="btn btn-gray" style="margin-top:16px;display:inline-block">Voltar para pedidos</a>
+        <!-- Botão para abrir ticket de atendimento -->
+        <?php
+        // Verifica se já existe ticket aberto para este pedido
+        $ticketExiste = false;
+        try {
+            $stmt = $pdo->prepare("
+                SELECT id FROM tickets 
+                WHERE pedido_id = ? AND usuario_id = ? AND status IN ('ABERTO', 'EM_ANDAMENTO')
+            ");
+            $stmt->execute([$order["id"], $usuarioId]);
+            $ticketExiste = (bool) $stmt->fetch();
+        } catch (Exception $e) {
+            $ticketExiste = false;
+        }
+        ?>
+        
+        <?php if (!$ticketExiste): ?>
+            <button type="button" 
+                    class="btn btn-primary" 
+                    id="btn-abrir-ticket" 
+                    data-pedido-id="<?= (int) $order["id"] ?>"
+                    style="margin-top: 16px;">
+                💬 Falar com Atendente
+            </button>
+        <?php else: ?>
+            <a href="<?= pageUrl("ticket.php") ?>?id=<?= $ticketExiste ? $ticketExiste : '' ?>" 
+               class="btn btn-primary" 
+               style="margin-top: 16px; display: inline-block;">
+                💬 Ver Meu Atendimento
+            </a>
+        <?php endif; ?>
+        
+        <a href="<?= pageUrl("pedidos.php") ?>" class="btn btn-gray" style="margin-top:16px;display:inline-block;margin-left: 8px;">Voltar para pedidos</a>
     </div>
 <?php else: ?>
     <?php if (empty($orders)): ?>
@@ -120,3 +152,137 @@ $error = flash("checkout_error");
 <?php endif; ?>
 
 <?php require __DIR__ . "/../includes/footer.php"; ?>
+
+<!-- Modal para abertura de ticket -->
+<div id="modal-ticket" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Abrir Chamado de Atendimento</h2>
+        
+        <form id="form-abrir-ticket">
+            <input type="hidden" id="ticket-pedido-id">
+            
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">Assunto *</label>
+                <input type="text" 
+                       id="ticket-assunto" 
+                       required
+                       minlength="5"
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                       placeholder="Descreva brevemente o problema">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">Categoria</label>
+                <select id="ticket-categoria" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                    <option value="GERAL">Geral</option>
+                    <option value="PRODUTO">Produto</option>
+                    <option value="ENTREGA">Entrega</option>
+                    <option value="PAGAMENTO">Pagamento</option>
+                    <option value="TROCA">Troca</option>
+                    <option value="DEVOLUCAO">Devolução</option>
+                    <option value="OUTRO">Outro</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">Mensagem</label>
+                <textarea id="ticket-mensagem" 
+                          rows="4"
+                          style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit;"
+                          placeholder="Descreva detalhes do seu problema..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button type="button" class="btn btn-gray" id="btn-fechar-modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Abrir Chamado</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const btnAbrirTicket = document.getElementById("btn-abrir-ticket");
+    const modal = document.getElementById("modal-ticket");
+    const form = document.getElementById("form-abrir-ticket");
+    const btnFecharModal = document.getElementById("btn-fechar-modal");
+
+    if (btnAbrirTicket && modal) {
+        btnAbrirTicket.addEventListener("click", function () {
+            const pedidoId = this.dataset.pedidoId;
+            document.getElementById("ticket-pedido-id").value = pedidoId;
+            modal.style.display = "flex";
+        });
+    }
+
+    if (btnFecharModal && modal) {
+        btnFecharModal.addEventListener("click", function () {
+            modal.style.display = "none";
+        });
+    }
+
+    if (modal) {
+        modal.addEventListener("click", function (e) {
+            if (e.target === modal) {
+                modal.style.display = "none";
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const pedidoId = document.getElementById("ticket-pedido-id").value;
+            const assunto = document.getElementById("ticket-assunto").value.trim();
+            const categoria = document.getElementById("ticket-categoria").value;
+            const mensagem = document.getElementById("ticket-mensagem").value.trim();
+
+            if (!assunto || assunto.length < 5) {
+                alert("Assunto deve ter pelo menos 5 caracteres.");
+                return;
+            }
+
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Abrindo...";
+
+            const csrfInput = document.querySelector('input[name=csrf_token]');
+            const csrfToken = csrfInput !== null ? csrfInput.value : "";
+
+            fetch("<?= apiUrl("ticket_abrir.php") ?>", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: JSON.stringify({
+                    pedido_id: pedidoId,
+                    assunto: assunto,
+                    categoria: categoria,
+                    mensagem: mensagem,
+                }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.sucesso) {
+                    alert("Chamado aberto com sucesso! Redirecionando...");
+                    setTimeout(() => {
+                        window.location.href = "<?= pageUrl("ticket.php") ?>?id=" + data.ticket_id;
+                    }, 1000);
+                } else {
+                    alert(data.erro || "Erro ao abrir chamado.");
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            })
+            .catch(() => {
+                alert("Erro de conexão. Tente novamente.");
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        });
+    }
+});
+</script>

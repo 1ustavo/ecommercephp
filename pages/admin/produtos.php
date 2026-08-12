@@ -321,23 +321,41 @@ function valorCampo(?array $produto, string $campo): string
                 <div class="collapsible-body">
                     <p class="suggestion-hint">
                         <span class="hint-icon"></span>
-                        Clique em cada área para adicionar uma imagem. Máximo 5MB por imagem.
+                        Arraste e solte imagens ou clique para selecionar. Máximo 8 imagens, 5MB cada. Formatos: JPG, PNG, WebP, GIF.
                     </p>
-                    <div class="image-uploader">
-                        <?php for ($i = 1; $i <= 4; $i++): ?>
+                    <div class="image-uploader" id="image-uploader">
+                        <?php for ($i = 1; $i <= 8; $i++): ?>
                             <?php $imagemAtual = $produtoImagens[$i - 1] ?? null; ?>
-                            <div class="image-upload-item <?= $imagemAtual ? "has-image" : "" ?>" id="imagem-slot-<?= $i ?>">
-                                <input type="file" accept="image/*" name="imagem_<?= $i ?>">
+                            <div class="image-upload-item <?= $imagemAtual ? "has-image" : "" ?>" 
+                                 id="imagem-slot-<?= $i ?>" 
+                                 data-index="<?= $i - 1 ?>"
+                                 draggable="<?= $imagemAtual ? "true" : "false" ?>">
+                                <input type="file" 
+                                       accept="image/jpeg,image/png,image/webp,image/gif" 
+                                       name="imagem_<?= $i ?>"
+                                       data-index="<?= $i - 1 ?>">
                                 <?php if ($imagemAtual && !empty($imagemAtual["url"])): ?>
-                                    <img src="<?= e($imagemAtual["url"]) ?>" alt="Imagem do produto">
+                                    <img src="<?= e($imagemAtual["url"]) ?>" 
+                                         alt="Imagem <?= $i ?>" 
+                                         data-url="<?= e($imagemAtual["url"]) ?>"
+                                         draggable="true">
                                 <?php endif; ?>
                                 <div class="upload-placeholder">
-                                    <span class="icon"></span>
-                                    <span><?= $i === 1 ? "Imagem Principal" : "Imagem $i" ?></span>
+                                    <span class="icon">+</span>
+                                    <span><?= $i === 1 ? "Principal" : "Imagem $i" ?></span>
                                 </div>
                                 <button type="button" class="remove-image" aria-label="Remover imagem">×</button>
+                                <div class="upload-progress" style="display:none">
+                                    <div class="upload-progress-bar"></div>
+                                </div>
                             </div>
                         <?php endfor; ?>
+                    </div>
+                    <div class="upload-zone" id="upload-zone" style="display:none">
+                        <div class="upload-zone-content">
+                            <span class="upload-zone-icon">📁</span>
+                            <p>Solte as imagens aqui</p>
+                        </div>
                     </div>
                 </div>
             </div>

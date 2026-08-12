@@ -136,6 +136,200 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const imageUploaders = document.querySelectorAll(".image-upload-item");
+    const uploadZone = document.getElementById("upload-zone");
+    const imageUploader = document.getElementById("image-uploader");
+
+    // Drag and Drop
+    if (uploadZone && imageUploader) {
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        document.body.addEventListener("dragenter", () => {
+            uploadZone.style.display = "block";
+        });
+
+        uploadZone.addEventListener("dragleave", (e) => {
+            if (e.target === uploadZone) {
+                uploadZone.style.display = "none";
+            }
+        });
+
+        uploadZone.addEventListener("drop", (e) => {
+            uploadZone.style.display = "none";
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        imageUploader.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            imageUploader.style.borderColor = "var(--primary)";
+        });
+
+        imageUploader.addEventListener("dragleave", () => {
+            imageUploader.style.borderColor = "";
+        });
+
+        imageUploader.addEventListener("drop", (e) => {
+            e.preventDefault();
+            imageUploader.style.borderColor = "";
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+    }
+
+    function handleFiles(files) {
+        const slotsVazios = Array.from(imageUploaders).filter(
+            (slot) => !slot.classList.contains("has-image")
+        );
+
+        if (slotsVazios.length === 0) {
+            mostrarToast("Máximo de 8 imagens atingido", "error");
+            return;
+        }
+
+        Array.from(files).forEach((file, index) => {
+            if (index >= slotsVazios.length) return;
+
+            if (!file.type.startsWith("image/")) {
+                mostrarToast(`Arquivo ${file.name} não é uma imagem`, "error");
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                mostrarToast(`Imagem ${file.name} muito grande. Máximo 5MB.`, "error");
+                return;
+            }
+
+            const slot = slotsVazios[index];
+            const input = slot.querySelector('input[type="file"]');
+            const progressDiv = slot.querySelector(".upload-progress");
+            const progressBar = slot.querySelector(".upload-progress-bar");
+
+            if (progressDiv && progressBar) {
+                progressDiv.style.display = "block";
+                progressBar.style.width = "0%";
+            }
+
+            const reader = new FileReader();
+            reader.onprogress = (e) => {
+                if (e.lengthComputable && progressBar) {
+                    const percent = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percent + "%";
+                }
+            };
+
+            reader.onload = function (e) {
+                const imgExistente = slot.querySelector("img");
+                if (imgExistente) imgExistente.remove();
+
+                const img = document.createElement("img");
+                img.src = e.target.result;
+                img.alt = "Preview da imagem";
+                img.draggable = true;
+                slot.appendChild(img);
+                slot.classList.add("has-image");
+                slot.draggable = true;
+
+                if (progressDiv) {
+                    progressDiv.style.display = "none";
+                }
+
+                // Adiciona evento de drag na imagem
+                img.addEventListener("dragstart", (ev) => {
+                    ev.dataTransfer.setData("text/plain", slot.dataset.index);
+                    slot.style.opacity = "0.5";
+                });
+
+                img.addEventListener("dragend", () => {
+                    slot.style.opacity = "1";
+                });
+
+                // Adiciona evento de drop no slot para reordenar
+                slot.addEventListener("dragover", (ev) => {
+                    ev.preventDefault();
+                    if (slot.dataset.index !== ev.dataTransfer.types.includes("text/plain")) {
+                        slot.style.borderColor = "var(--primary)";
+                        slot.style.transform = "scale(1.05)";
+                    }
+                });
+
+                slot.addEventListener("dragleave", () => {
+                    slot.style.borderColor = "";
+                    slot.style.transform = "";
+                });
+
+                slot.addEventListener("drop", (ev) => {
+                    ev.preventDefault();
+                    slot.style.borderColor = "";
+                    slot.style.transform = "";
+
+                    const draggedIndex = ev.dataTransfer.getData("text/plain");
+                    const targetIndex = slot.dataset.index;
+
+                    if (draggedIndex !== targetIndex) {
+                        reordenarImagens(draggedIndex, targetIndex);
+                    }
+                });
+
+                mostrarToast("Imagem carregada com sucesso", "success");
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function reordenarImagens(fromIndex, toIndex) {
+        const slots = Array.from(imageUploaders);
+        const draggedSlot = slots.find((s) => s.dataset.index === fromIndex);
+        const targetSlot = slots.find((s) => s.dataset.index === toIndex);
+
+        if (!draggedSlot || !targetSlot) return;
+
+        // Troca os inputs
+        const draggedInput = draggedSlot.querySelector('input[type="file"]');
+        const targetInput = targetSlot.querySelector('input[type="file"]');
+
+        if (draggedInput && targetInput) {
+            const tempFiles = draggedInput.files;
+            draggedInput.value = targetInput.value;
+            targetInput.value = "";
+
+            // Atualiza os índices
+            draggedSlot.dataset.index = toIndex;
+            targetSlot.dataset.index = fromIndex;
+            draggedInput.dataset.index = toIndex;
+            targetInput.dataset.index = fromIndex;
+
+            // Atualiza os IDs
+            draggedSlot.id = "imagem-slot-" + (parseInt(toIndex) + 1);
+            targetSlot.id = "imagem-slot-" + (parseInt(fromIndex) + 1);
+        }
+
+        // Se ambos têm imagens, troca as imagens
+        const draggedImg = draggedSlot.querySelector("img");
+        const targetImg = targetSlot.querySelector("img");
+
+        if (draggedImg && targetImg) {
+            const draggedSrc = draggedImg.src;
+            const targetSrc = targetImg.src;
+
+            draggedImg.src = targetSrc;
+            targetImg.src = draggedSrc;
+
+            // Atualiza data-url
+            const draggedUrl = draggedImg.dataset.url;
+            const targetUrl = targetImg.dataset.url;
+            draggedImg.dataset.url = targetUrl;
+            targetImg.dataset.url = draggedUrl;
+        }
+
+        mostrarToast("Imagens reordenadas", "success");
+    }
 
     imageUploaders.forEach((item) => {
         const input = item.querySelector('input[type="file"]');
@@ -158,7 +352,22 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
+                const progressDiv = item.querySelector(".upload-progress");
+                const progressBar = item.querySelector(".upload-progress-bar");
+
+                if (progressDiv && progressBar) {
+                    progressDiv.style.display = "block";
+                    progressBar.style.width = "0%";
+                }
+
                 const reader = new FileReader();
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable && progressBar) {
+                        const percent = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percent + "%";
+                    }
+                };
+
                 reader.onload = function (e) {
                     const imgExistente = item.querySelector("img");
                     if (imgExistente) imgExistente.remove();
@@ -166,8 +375,54 @@ document.addEventListener("DOMContentLoaded", function () {
                     const img = document.createElement("img");
                     img.src = e.target.result;
                     img.alt = "Preview da imagem";
+                    img.draggable = true;
                     item.appendChild(img);
                     item.classList.add("has-image");
+                    item.draggable = true;
+
+                    if (progressDiv) {
+                        progressDiv.style.display = "none";
+                    }
+
+                    // Adiciona eventos de drag para reordenar
+                    img.addEventListener("dragstart", (ev) => {
+                        ev.dataTransfer.setData("text/plain", item.dataset.index);
+                        item.style.opacity = "0.5";
+                    });
+
+                    img.addEventListener("dragend", () => {
+                        item.style.opacity = "1";
+                    });
+
+                    // Adiciona evento de drop no slot para reordenar
+                    item.addEventListener("dragover", (ev) => {
+                        ev.preventDefault();
+                        const draggedIndex = ev.dataTransfer.getData("text/plain");
+                        if (draggedIndex && draggedIndex !== item.dataset.index) {
+                            item.style.borderColor = "var(--primary)";
+                            item.style.transform = "scale(1.05)";
+                        }
+                    });
+
+                    item.addEventListener("dragleave", () => {
+                        item.style.borderColor = "";
+                        item.style.transform = "";
+                    });
+
+                    item.addEventListener("drop", (ev) => {
+                        ev.preventDefault();
+                        item.style.borderColor = "";
+                        item.style.transform = "";
+
+                        const draggedIndex = ev.dataTransfer.getData("text/plain");
+                        const targetIndex = item.dataset.index;
+
+                        if (draggedIndex && draggedIndex !== targetIndex) {
+                            reordenarImagens(draggedIndex, targetIndex);
+                        }
+                    });
+
+                    mostrarToast("Imagem carregada com sucesso", "success");
                 };
                 reader.readAsDataURL(file);
             });
@@ -182,6 +437,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (img) img.remove();
                 if (input) input.value = "";
                 item.classList.remove("has-image");
+                item.draggable = false;
+                mostrarToast("Imagem removida", "success");
             });
         }
     });

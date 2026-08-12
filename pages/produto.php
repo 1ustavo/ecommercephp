@@ -23,12 +23,33 @@ require __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="product-detail">
-    <div class="product-detail-img">
-        <?php $imgs = Produto::imagens((int) $produto["id"]); $imgUrl = $imgs[0]["url"] ?? null; ?>
-        <?php if ($imgUrl && !str_starts_with($imgUrl, 'placeholder:')): ?>
-            <img src="<?= baseUrl() . '/' . $imgUrl ?>" alt="<?= e($produto['nome']) ?>">
-        <?php else: ?>
-            <div style="background:<?= corPlaceholder($produto["slug"]) ?>;width:100%;height:100%"></div>
+    <div class="product-detail-gallery">
+        <?php $imgs = Produto::imagens((int) $produto["id"]); ?>
+        <div class="product-detail-img" id="main-image-container">
+            <?php $imgPrincipal = $imgs[0]["url"] ?? null; ?>
+            <?php if ($imgPrincipal && !str_starts_with($imgPrincipal, 'placeholder:')): ?>
+                <img src="<?= baseUrl() . '/' . $imgPrincipal ?>" 
+                     alt="<?= e($produto['nome']) ?>" 
+                     id="main-product-image"
+                     data-images='<?= json_encode(array_map(fn($img) => baseUrl() . '/' . $img["url"], $imgs)) ?>'>
+            <?php else: ?>
+                <div <?= corPlaceholder($produto["slug"]) ?>;width:100%;height:100%"></div>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (count($imgs) > 1): ?>
+            <div class="product-gallery-thumbs">
+                <?php foreach ($imgs as $index => $img): ?>
+                    <?php if (!empty($img["url"]) && !str_starts_with($img["url"], 'placeholder:')): ?>
+                        <div class="product-gallery-thumb <?= $index === 0 ? "active" : "" ?>" 
+                             data-src="<?= baseUrl() . '/' . e($img["url"]) ?>"
+                             data-index="<?= $index ?>">
+                            <img src="<?= baseUrl() . '/' . e($img["url"]) ?>" 
+                                 alt="Miniatura <?= $index + 1 ?>">
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </div>
     <div>
