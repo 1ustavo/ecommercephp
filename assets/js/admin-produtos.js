@@ -139,6 +139,48 @@ document.addEventListener("DOMContentLoaded", function () {
     const uploadZone = document.getElementById("upload-zone");
     const imageUploader = document.getElementById("image-uploader");
 
+    // Atualiza o hidden "imagem_principal" conforme o 1º slot com imagem.
+    // Para imagens existentes, usa a URL real (uploads/... ou http...).
+    // Para imagens novas (data URL base64), envia o marcador __NOVO__:<índice>
+    // que o backend mapeia para a URL gerada no servidor.
+    function atualizarPrincipalHidden() {
+        let principalInput = document.querySelector('input[name="imagem_principal"]');
+        if (!principalInput) {
+            principalInput = document.createElement("input");
+            principalInput.type = "hidden";
+            principalInput.name = "imagem_principal";
+            const form = document.getElementById("form-produto");
+            if (form) form.appendChild(principalInput);
+        }
+
+        let primeiraUrl = "";
+        // Primeiro slot (index 0) com imagem
+        const slot1 = document.getElementById("imagem-slot-1");
+        if (slot1) {
+            const img0 = slot1.querySelector("img");
+            if (img0) {
+                if (img0.dataset.url && !img0.dataset.url.startsWith("data:")) {
+                    // Imagem existente → URL real
+                    primeiraUrl = img0.dataset.url;
+                } else {
+                    // Imagem nova (data URL) → marcador __NOVO__:<índice DOM>
+                    // O índice DOM (posição no array name="imagens[]") é o que
+                    // o backend recebe em $_FILES["imagens"].
+                    const input = slot1.querySelector('input[type="file"]');
+                    if (input && input.files && input.files.length > 0) {
+                        const inputsImagens = Array.from(document.querySelectorAll('input[name="imagens[]"]'));
+                        const indiceDom = inputsImagens.indexOf(input);
+                        if (indiceDom >= 0) {
+                            primeiraUrl = "__NOVO__:" + indiceDom;
+                        }
+                    }
+                }
+            }
+        }
+        principalInput.value = primeiraUrl;
+    }
+    atualizarPrincipalHidden();
+
     // Drag and Drop
     if (uploadZone && imageUploader) {
         ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -253,7 +295,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Adiciona evento de drop no slot para reordenar
                 slot.addEventListener("dragover", (ev) => {
                     ev.preventDefault();
-                    if (slot.dataset.index !== ev.dataTransfer.types.includes("text/plain")) {
+                    const draggedIndex = ev.dataTransfer.getData("text/plain");
+                    if (draggedIndex && draggedIndex !== slot.dataset.index) {
                         slot.style.borderColor = "var(--primary)";
                         slot.style.transform = "scale(1.05)";
                     }
@@ -277,9 +320,47 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                 });
 
+                // Atualiza a principal se a imagem nova estiver no slot 1
+                atualizarPrincipalHidden();
                 mostrarToast("Imagem carregada com sucesso", "success");
             };
             reader.readAsDataURL(file);
+        });
+    }
+
+    // Estado da ordem visual dos slots. Cada entrada é:
+    //   { slotIndex, url }  — url é a URL real (existente) ou "__NOVO__:<índice DOM>"
+    //                         para imagens novas (data URL) ainda sem URL no servidor.
+    // IMPORTANTE: o índice DOM do input (posição no array name="imagens[]") é o que
+    // o backend recebe em $_FILES["imagens"], então o marcador usa esse índice,
+    // NÃO o data-index (que é trocado na reordenação).
+    let ordemSlots = [];
+
+    function coletarOrdemSlots() {
+        ordemSlots = [];
+        // Ordena os slots pela ordem visual (data-index), que é a ordem
+        // que o admin vê e que deve ser gravada em produto_imagens.ordem.
+        const slotsOrdenados = Array.from(imageUploaders)
+            .filter((slot) => slot.querySelector("img")) // só slots com imagem
+            .sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+
+        slotsOrdenados.forEach((slot) => {
+            const input = slot.querySelector('input[type="file"]');
+            const hidden = slot.querySelector('input[name="imagem_existente[]"]');
+
+            if (hidden && hidden.value) {
+                // Imagem existente → URL real
+                ordemSlots.push({ slotIndex: slot.dataset.index, url: hidden.value });
+            } else if (input && input.files && input.files.length > 0) {
+                // Imagem nova (data URL) → marcador __NOVO__:<índice DOM do input>
+                // O índice DOM (posição no array name="imagens[]") é o que o
+                // backend recebe em $_FILES["imagens"].
+                const inputsImagens = Array.from(document.querySelectorAll('input[name="imagens[]"]'));
+                const indiceDom = inputsImagens.indexOf(input);
+                if (indiceDom >= 0) {
+                    ordemSlots.push({ slotIndex: slot.dataset.index, url: "__NOVO__:" + indiceDom });
+                }
+            }
         });
     }
 
@@ -290,27 +371,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!draggedSlot || !targetSlot) return;
 
-        // Troca os inputs
+        // Troca os índices dos slots (dataset) — a ordem visual é definida
+        // pelos índices, não pelos valores dos file inputs (que são read-only).
+        draggedSlot.dataset.index = toIndex;
+        targetSlot.dataset.index = fromIndex;
+
+        // Atualiza os IDs dos slots
+        draggedSlot.id = "imagem-slot-" + (parseInt(toIndex) + 1);
+        targetSlot.id = "imagem-slot-" + (parseInt(fromIndex) + 1);
+
+        // Atualiza os data-index dos inputs de arquivo
         const draggedInput = draggedSlot.querySelector('input[type="file"]');
         const targetInput = targetSlot.querySelector('input[type="file"]');
+        if (draggedInput) draggedInput.dataset.index = toIndex;
+        if (targetInput) targetInput.dataset.index = fromIndex;
 
-        if (draggedInput && targetInput) {
-            const tempFiles = draggedInput.files;
-            draggedInput.value = targetInput.value;
-            targetInput.value = "";
-
-            // Atualiza os índices
-            draggedSlot.dataset.index = toIndex;
-            targetSlot.dataset.index = fromIndex;
-            draggedInput.dataset.index = toIndex;
-            targetInput.dataset.index = fromIndex;
-
-            // Atualiza os IDs
-            draggedSlot.id = "imagem-slot-" + (parseInt(toIndex) + 1);
-            targetSlot.id = "imagem-slot-" + (parseInt(fromIndex) + 1);
-        }
-
-        // Se ambos têm imagens, troca as imagens
+        // Troca as imagens (visual)
         const draggedImg = draggedSlot.querySelector("img");
         const targetImg = targetSlot.querySelector("img");
 
@@ -328,6 +404,17 @@ document.addEventListener("DOMContentLoaded", function () {
             targetImg.dataset.url = draggedUrl;
         }
 
+        // Troca os valores dos hidden (URLs existentes)
+        const draggedHidden = draggedSlot.querySelector('input[name="imagem_existente[]"]');
+        const targetHidden = targetSlot.querySelector('input[name="imagem_existente[]"]');
+        if (draggedHidden && targetHidden) {
+            const tempVal = draggedHidden.value;
+            draggedHidden.value = targetHidden.value;
+            targetHidden.value = tempVal;
+        }
+
+        coletarOrdemSlots();
+        atualizarPrincipalHidden();
         mostrarToast("Imagens reordenadas", "success");
     }
 
@@ -371,6 +458,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 reader.onload = function (e) {
                     const imgExistente = item.querySelector("img");
                     if (imgExistente) imgExistente.remove();
+
+                    // Se o slot tinha uma imagem existente (hidden), remove o hidden
+                    // para que o backend não mantenha a URL antiga (a nova assume o slot).
+                    const hiddenExistente = item.querySelector('input[name="imagem_existente[]"]');
+                    if (hiddenExistente) hiddenExistente.remove();
 
                     const img = document.createElement("img");
                     img.src = e.target.result;
@@ -422,6 +514,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         }
                     });
 
+                    atualizarPrincipalHidden();
                     mostrarToast("Imagem carregada com sucesso", "success");
                 };
                 reader.readAsDataURL(file);
@@ -436,8 +529,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 const img = item.querySelector("img");
                 if (img) img.remove();
                 if (input) input.value = "";
+                // Remove também o hidden da imagem existente (para o backend saber que foi removida)
+                const hidden = item.querySelector('input[name="imagem_existente[]"]');
+                if (hidden) hidden.remove();
                 item.classList.remove("has-image");
                 item.draggable = false;
+                atualizarPrincipalHidden();
                 mostrarToast("Imagem removida", "success");
             });
         }
@@ -592,6 +689,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 valido = parseInt(valor) >= 0;
                 mensagem = "O estoque não pode ser negativo.";
                 break;
+            case "produto-peso":
+            case "produto-comprimento":
+            case "produto-largura":
+            case "produto-altura":
+                valido = parseInt(valor) > 0;
+                mensagem = "Este campo deve ser um número positivo.";
+                break;
             case "produto-slug":
                 valido = /^[a-z0-9-]+$/.test(valor) && valor.length > 0;
                 mensagem = "Slug inválido. Use apenas letras minúsculas, números e hífens.";
@@ -624,7 +728,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Adiciona listeners de validação em tempo real
     const camposValidaveis = document.querySelectorAll(
-        "#produto-nome, #produto-sku, #produto-ean, #produto-ncm, #produto-preco, #produto-estoque, #produto-slug"
+        "#produto-nome, #produto-sku, #produto-ean, #produto-ncm, #produto-preco, #produto-estoque, #produto-slug, #produto-peso, #produto-comprimento, #produto-largura, #produto-altura"
     );
 
     camposValidaveis.forEach((campo) => {
@@ -642,7 +746,11 @@ document.addEventListener("DOMContentLoaded", function () {
         const nomeOk = document.getElementById("produto-nome")?.value.trim().length >= 3;
         const precoOk = parseFloat(document.getElementById("produto-preco")?.value) > 0;
         const estoqueOk = parseInt(document.getElementById("produto-estoque")?.value) >= 0;
-        const tab1Ok = nomeOk && precoOk && estoqueOk;
+        const pesoOk = parseInt(document.getElementById("produto-peso")?.value) > 0;
+        const comprimentoOk = parseInt(document.getElementById("produto-comprimento")?.value) > 0;
+        const larguraOk = parseInt(document.getElementById("produto-largura")?.value) > 0;
+        const alturaOk = parseInt(document.getElementById("produto-altura")?.value) > 0;
+        const tab1Ok = nomeOk && precoOk && estoqueOk && pesoOk && comprimentoOk && larguraOk && alturaOk;
 
         const slugOk = /^[a-z0-9-]+$/.test(document.getElementById("produto-slug")?.value || "");
         const tab2Ok = slugOk;
@@ -677,6 +785,10 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("produto-preco"),
             document.getElementById("produto-estoque"),
             document.getElementById("produto-slug"),
+            document.getElementById("produto-peso"),
+            document.getElementById("produto-comprimento"),
+            document.getElementById("produto-largura"),
+            document.getElementById("produto-altura"),
         ];
 
         const preenchidos = campos.filter((c) => c && c.value.trim().length > 0).length;
@@ -738,6 +850,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 "produto-preco",
                 "produto-estoque",
                 "produto-slug",
+                "produto-peso",
+                "produto-comprimento",
+                "produto-largura",
+                "produto-altura",
             ];
 
             let todosValidos = true;
@@ -775,6 +891,12 @@ document.addEventListener("DOMContentLoaded", function () {
             if (csrfToken) {
                 formData.append("csrf_token", csrfToken);
             }
+
+            // Envia a ordem visual dos slots (PASSO 5)
+            coletarOrdemSlots();
+            ordemSlots.forEach((item) => {
+                formData.append("imagem_ordem[]", item.url);
+            });
 
             // Feedback de loading no botão
             const btnSalvar = document.getElementById("btn-salvar");

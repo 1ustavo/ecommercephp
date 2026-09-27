@@ -142,19 +142,26 @@ function rate_limit_check(string $key, int $limit, int $windowSeconds): bool
     } catch (Exception $e) {
         try { $pdo->rollBack(); } catch (Exception $ee) {}
         error_log('Rate limit error: ' . $e->getMessage());
-        // Fail-open: allow the request if DB fails
-        return true;
+        // Fail-closed: se o controle não pôde ser verificado (ex.: banco fora),
+        // nega a ação. Em endpoints sensíveis (login, cadastro, reset de senha)
+        // segurança vale mais do que disponibilidade momentânea.
+        return false;
     }
 }
 
 function asset(string $path): string
 {
     $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+
+    // Cache busting: evita servir JS/CSS antigos do cache do navegador
+    $filePath = __DIR__ . "/../assets/" . ltrim($path, '/');
+    $version = (file_exists($filePath)) ? "?v=" . filemtime($filePath) : "";
+
     if ($appUrl !== '') {
-        return $appUrl . '/assets/' . ltrim($path, '/');
+        return $appUrl . '/assets/' . ltrim($path, '/') . $version;
     }
 
-    return baseUrl() . "/assets/" . ltrim($path, "/");
+    return baseUrl() . "/assets/" . ltrim($path, "/") . $version;
 }
 
 function pageUrl(string $path): string
@@ -185,14 +192,43 @@ function isAdmin(): bool
 }
 
 /**
- * Guard para endpoints de API admin: retorna JSON 401/403 e encerra
- * a execucao em vez de redirecionar (diferente de Auth::verificarAdmin,
- * que faz header redirect e serve para paginas, nao para APIs).
+ * Hierarquia de papéis (matriz de autorização):
+ *   ADMIN       = acesso total
+ *   GERENTE     = aprova/recusa pedido, produtos, cupons, relatórios
+ *   FUNCIONARIO = leitura de pedidos (fila) + resposta a tickets
+ */
+function papelNivel(string $cargo): int
+{
+    return match ($cargo) {
+        "ADMIN" => 3,
+        "GERENTE" => 2,
+        "FUNCIONARIO" => 1,
+        default => 0,
+    };
+}
+
+/**
+ * Verifica se o usuário logado possui um dos papéis informados.
+ * Usa a mesma matriz de requererPapel() — para ajuste de EXIBIÇÃO
+ * (esconder links/botões no front). A autorização real continua
+ * sendo aplicada pelos guards nos endpoints de API.
+ */
+function temPapel(string ...$papeis): bool
+{
+    $cargo = (string) ($_SESSION["cargo"] ?? "");
+    return in_array($cargo, $papeis, true);
+}
+
+/**
+ * Guard para endpoints de API com controle fino de papel.
+ * Valida: autenticação + sessão rigorosa (timeout de inatividade,
+ * fingerprint do navegador, IP e session_version — sessões anteriores
+ * a uma troca de senha são invalidadas) e o papel exigido.
  *
  * Uso tipico no topo de api/admin/*.php:
- *   requererAdminApi(); // encerra aqui se nao for admin
+ *   requererPapel(["ADMIN", "GERENTE"]); // encerra aqui se nao atender
  */
-function requererAdminApi(): void
+function requererPapel(array $papeis): void
 {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -200,48 +236,37 @@ function requererAdminApi(): void
 
     header("Content-Type: application/json; charset=utf-8");
 
-    // 1) Autenticacao: precisa estar logado
-    if (!isset($_SESSION["usuario_id"])) {
+    // 1) Autenticação + sessão rigorosa (timeout, UA, IP, session_version)
+    if (!(new Auth())->validarSessao()) {
         http_response_code(401);
         echo json_encode([
             "sucesso" => false,
-            "erro" => "Sessao expirada. Faca login novamente.",
+            "erro" => "Sessão expirada ou inválida. Faça login novamente.",
         ]);
         exit;
     }
 
-    // 2) Sessão rigorosa: timeout de inatividade (30 min)
-    $timeout = 1800;
-    if (isset($_SESSION["last_activity"]) && (time() - $_SESSION["last_activity"] > $timeout)) {
-        http_response_code(401);
-        echo json_encode([
-            "sucesso" => false,
-            "erro" => "Sessao expirada por inatividade. Faca login novamente.",
-        ]);
-        exit;
-    }
-    $_SESSION["last_activity"] = time();
-
-    // 3) Valida fingerprint do navegador (User-Agent)
-    $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? "";
-    if (isset($_SESSION["user_agent"]) && $_SESSION["user_agent"] !== $userAgent) {
-        http_response_code(401);
-        echo json_encode([
-            "sucesso" => false,
-            "erro" => "Sessao invalida. Faca login novamente.",
-        ]);
-        exit;
-    }
-
-    // 4) Autorizacao: precisa ser admin/gerente/funcionario
-    if (!isAdmin()) {
+    // 2) Autorização por papel
+    $cargo = (string) ($_SESSION["cargo"] ?? "");
+    if (!in_array($cargo, $papeis, true)) {
         http_response_code(403);
         echo json_encode([
             "sucesso" => false,
-            "erro" => "Acesso negado. Apenas administradores podem acessar este recurso.",
+            "erro" => "Acesso negado. Este recurso exige papel: " . implode(", ", $papeis) . ".",
         ]);
         exit;
     }
+}
+
+/**
+ * @deprecated Use requererPapel() com a lista explícita de papéis.
+ * Mantido para compatibilidade: agora delega ao guard rigoroso
+ * (valida timeout, fingerprint, IP e session_version) mantendo o
+ * comportamento antigo de aceitar ADMIN/GERENTE/FUNCIONARIO.
+ */
+function requererAdminApi(): void
+{
+    requererPapel(["ADMIN", "GERENTE", "FUNCIONARIO"]);
 }
 
 function isCliente(): bool

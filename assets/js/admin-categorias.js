@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("cat-id").value = "";
     }
 
-    btnNova.addEventListener("click", function () {
+    btnNova?.addEventListener("click", function () {
         modalTitulo.textContent = "Nova Categoria";
         abrirModal();
     });

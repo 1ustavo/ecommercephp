@@ -24,6 +24,8 @@ $sucesso = isset($_GET["sucesso"]);
     <div class="alert alert-error">Preencha e-mail e senha.</div>
 <?php elseif ($erro === "credenciais"): ?>
     <div class="alert alert-error">E-mail ou senha inválidos.</div>
+<?php elseif ($erro === "bloqueado"): ?>
+    <div class="alert alert-error">Conta temporariamente bloqueada devido a múltiplas tentativas inválidas. Tente novamente mais tarde.</div>
 <?php elseif ($erro === "rate_limit"): ?>
     <div class="alert alert-error">Muitas tentativas de login. Tente novamente em alguns minutos.</div>
 <?php endif; ?>

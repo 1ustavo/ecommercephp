@@ -25,15 +25,31 @@ require __DIR__ . "/../includes/header.php";
 <div class="product-detail">
     <div class="product-detail-gallery">
         <?php $imgs = Produto::imagens((int) $produto["id"]); ?>
+        <?php
+        // Helper para montar a URL completa da imagem:
+        // - URLs externas (http/https) são usadas como estão
+        // - URLs locais (uploads/...) recebem o prefixo baseUrl()
+        function urlImagemProduto(string $url): string
+        {
+            if (preg_match('#^https?://#', $url)) {
+                return $url;
+            }
+            return baseUrl() . '/' . $url;
+        }
+        ?>
         <div class="product-detail-img" id="main-image-container">
             <?php $imgPrincipal = $imgs[0]["url"] ?? null; ?>
             <?php if ($imgPrincipal && !str_starts_with($imgPrincipal, 'placeholder:')): ?>
-                <img src="<?= baseUrl() . '/' . $imgPrincipal ?>" 
+                <img src="<?= e(urlImagemProduto($imgPrincipal)) ?>" 
                      alt="<?= e($produto['nome']) ?>" 
-                     id="main-product-image"
-                     data-images='<?= json_encode(array_map(fn($img) => baseUrl() . '/' . $img["url"], $imgs)) ?>'>
+                     id="main-product-image">
             <?php else: ?>
-                <div <?= corPlaceholder($produto["slug"]) ?>;width:100%;height:100%"></div>
+                <div style="background:<?= corPlaceholder($produto["slug"]) ?>;width:100%;height:100%"></div>
+            <?php endif; ?>
+            
+            <?php if (count($imgs) > 1): ?>
+                <button type="button" class="gallery-nav gallery-prev" id="gallery-prev" aria-label="Imagem anterior">‹</button>
+                <button type="button" class="gallery-nav gallery-next" id="gallery-next" aria-label="Próxima imagem">›</button>
             <?php endif; ?>
         </div>
         
@@ -42,9 +58,9 @@ require __DIR__ . "/../includes/header.php";
                 <?php foreach ($imgs as $index => $img): ?>
                     <?php if (!empty($img["url"]) && !str_starts_with($img["url"], 'placeholder:')): ?>
                         <div class="product-gallery-thumb <?= $index === 0 ? "active" : "" ?>" 
-                             data-src="<?= baseUrl() . '/' . e($img["url"]) ?>"
+                             data-src="<?= e(urlImagemProduto($img["url"])) ?>"
                              data-index="<?= $index ?>">
-                            <img src="<?= baseUrl() . '/' . e($img["url"]) ?>" 
+                            <img src="<?= e(urlImagemProduto($img["url"])) ?>" 
                                  alt="Miniatura <?= $index + 1 ?>">
                         </div>
                     <?php endif; ?>
@@ -53,7 +69,12 @@ require __DIR__ . "/../includes/header.php";
         <?php endif; ?>
     </div>
     <div>
-        <div class="product-category"><?= e($produto["categoria_nome"]) ?></div>
+        <div class="product-category">
+            <?= e($produto["categoria_nome"]) ?>
+            <?php if (!empty($produto["marca_nome"])): ?>
+                • <?= e($produto["marca_nome"]) ?>
+            <?php endif; ?>
+        </div>
         <h1 class="page-title"><?= e($produto["nome"]) ?></h1>
         <p style="color:var(--cinza-600);margin-bottom:20px"><?= e($produto["descricao"]) ?></p>
         <div class="product-price" id="preco-display"><?= formatarMoeda((float) $produto["preco"]) ?></div>
@@ -61,7 +82,7 @@ require __DIR__ . "/../includes/header.php";
             Estoque: <span id="estoque-display"><?= (int) $produto["estoque"] ?></span> un.
         </p>
 
-        <form id="form-add-cart" action="<?= apiUrl("carrinho.php") ?>?action=adicionar" method="post" data-produto-id="<?= (int) $produto["id"] ?>" data-estoque="<?= (int) $produto["estoque"] ?>">
+        <form id="form-add-cart" action="<?= apiUrl("carrinho.php") ?>?action=adicionar" method="post" data-produto-id="<?= (int) $produto["id"] ?>" data-estoque="<?= (int) $produto["estoque"] ?>" data-preco="<?= (float) $produto["preco"] ?>">
             <?= csrf_input() ?>
             <input type="hidden" name="produto_id" value="<?= (int) $produto["id"] ?>">
             <?php if (!empty($variacoes)): ?>

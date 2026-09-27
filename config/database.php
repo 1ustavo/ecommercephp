@@ -7,7 +7,20 @@ loadEnv(__DIR__ . "/../.env");
 $host = $_ENV["DB_HOST"] ?? "localhost";
 $dbname = $_ENV["DB_NAME"] ?? "ecommercephp";
 $user = $_ENV["DB_USER"] ?? "postgres";
-$password = $_ENV["DB_PASS"] ?? "1040";
+// SENHA OBRIGATÓRIA: não usa fallback hardcoded. Se DB_PASS não estiver
+// definida, lança exceção clara em vez de usar senha padrão (evita credencial
+// conhecida no código-fonte versionado).
+$password = $_ENV["DB_PASS"] ?? "";
+if ($password === "") {
+    http_response_code(500);
+    echo json_encode([
+        "erro" => "Erro de configuração: DB_PASS não configurada no .env."
+    ]);
+    if (php_sapi_name() === "cli") {
+        fwrite(STDERR, "Erro de configuração: DB_PASS não configurada no .env." . PHP_EOL);
+    }
+    exit(1);
+}
 
 try {
     $pdo = new PDO(

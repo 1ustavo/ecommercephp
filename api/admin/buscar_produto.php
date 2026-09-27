@@ -2,9 +2,9 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Proteção: apenas admin pode acessar
-$auth = new Auth();
-$auth->verificarAdmin();
+// Guard de API com papel exigido: retorna JSON 401/403 (não redirect HTML),
+// mantendo o contrato JSON para chamadas fetch do painel admin.
+requererPapel(["ADMIN", "GERENTE"]);
 
 // Aceita apenas GET
 if ($_SERVER["REQUEST_METHOD"] !== "GET") {

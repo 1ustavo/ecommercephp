@@ -10,7 +10,10 @@ if (session_status() === PHP_SESSION_NONE) {
 $auth = new Auth();
 
 // Verifica login de forma segura — retorna JSON em vez de redirect
-if (!isset($_SESSION["usuario_id"])) {
+// validarSessao() aplica timeout de inatividade, fingerprint, IP e
+// session_version — mesmas regras de verificarLogin, sem redirect.
+if (!isset($_SESSION["usuario_id"]) || !$auth->validarSessao()) {
+    $_SESSION = []; // sessão inválida/expirada: limpa dados autenticados
     http_response_code(401);
     header("Content-Type: application/json; charset=utf-8");
     echo json_encode(["sucesso" => false, "erro" => "Sessão expirada. Faça login novamente."]);
@@ -82,7 +85,28 @@ if (!empty($itensSemEstoque)) {
 
 // Calcula imposto simples sobre o subtotal (ex: 10% de ICMS)
 $subtotal = Carrinho::subtotal();
-$frete = calcularFrete($metodoFrete, $subtotal);
+
+// ============================================================
+// FRETE REAL — usa o resultado calculado em api/frete.php
+// (persistido na sessão). Se não houver, usa o fallback fixo.
+// ============================================================
+$frete = 0.0;
+$freteCalculado = $_SESSION["frete_calculo"] ?? null;
+
+if (is_array($freteCalculado) && !empty($freteCalculado["opcoes"])) {
+    foreach ($freteCalculado["opcoes"] as $opcao) {
+        if (strtolower((string) $opcao["servico"]) === strtolower($metodoFrete)) {
+            $frete = (float) ($opcao["valor"] ?? 0);
+            break;
+        }
+    }
+}
+
+// Fallback: se não encontrou o serviço na sessão, usa o valor fixo
+if ($frete <= 0 && $metodoFrete !== "retirada") {
+    $frete = calcularFrete($metodoFrete, $subtotal);
+}
+
 $imposto = round($subtotal * 0.10, 2);
 
 // Aplica cupom se fornecido manualmente OU persistido na sessão (aplicado no carrinho)
@@ -125,22 +149,19 @@ registrarAuditoria(
     "Pedido #" . $pedidoId . " | Frete: " . $metodoFrete . " | Pagamento: " . $metodoPagamento
 );
 
-// Se o método de pagamento for cartão, iniciar Stripe Checkout
-if ($metodoPagamento === 'cartao') {
-    $checkoutUrl = GatewayPagamento::criarCheckout($pedidoId, 'stripe');
-    if ($checkoutUrl) {
-        // Redireciona o cliente para a URL segura do Stripe Checkout
-        header("Location: " . $checkoutUrl);
-        exit;
-    }
+// ============================================================
+// SIMULAÇÃO DE CHECKOUT — SEM GATEWAY REAL
+// ============================================================
+// O cartão de crédito na etapa de pagamento é 100% visual e de
+// validação de formato no navegador (Luhn, validade, CVV, bandeira).
+// Nenhum dado de cartão é enviado aqui nem processado por gateway
+// real (sem PCI compliance). O pedido é criado como simulado.
+// ============================================================
 
-    // Falha ao criar sessão de pagamento => sinalizar erro e voltar ao checkout
-    flash("checkout_error", "Não foi possível iniciar o pagamento. Tente novamente.");
-    header("Location: " . pageUrl("checkout.php"));
-    exit;
-}
+// Confirma o pagamento como simulado/aprovado (sem gateway externo)
+Pedido::confirmarPagamento($pedidoId);
+try { Notificacao::pedidoPago($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar pagamento simulado: ' . $e->getMessage()); }
 
-// Fluxo antigo: finalizar sem redirecionamento externo
-flash("checkout_success", "Pedido criado com sucesso.");
+flash("checkout_success", "Pedido criado, pagamento simulado com sucesso.");
 header("Location: " . pageUrl("pedidos.php"));
 exit;

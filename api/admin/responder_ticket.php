@@ -2,8 +2,8 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Proteção: apenas admin pode acessar (retorna JSON 401/403, não redirect)
-requererAdminApi();
+// Proteção: FUNCIONARIO+ pode responder tickets (retorna JSON 401/403, não redirect)
+requererPapel(["ADMIN", "GERENTE", "FUNCIONARIO"]);
 
 // CSRF protection
 verify_csrf_from_request(true);

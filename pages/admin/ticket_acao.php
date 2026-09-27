@@ -72,7 +72,9 @@ try {
             $_SESSION["flash"] = ["erro" => "Ação inválida."];
     }
 } catch (Exception $e) {
-    $_SESSION["flash"] = ["erro" => $e->getMessage()];
+    // Loga o erro real internamente; expõe apenas mensagem genérica ao usuário.
+    error_log("Erro ao processar ação de ticket #{$ticketId}: " . $e->getMessage());
+    $_SESSION["flash"] = ["erro" => "Erro ao processar solicitação. Tente novamente."];
 }
 
 header("Location: " . pageUrl("admin/ticket_detalhe.php?id=" . $ticketId));

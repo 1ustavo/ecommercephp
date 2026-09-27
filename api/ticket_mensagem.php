@@ -7,7 +7,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION["usuario_id"])) {
+if (!isset($_SESSION["usuario_id"]) || !(new Auth())->validarSessao()) {
+    $_SESSION = []; // sessão inválida/expirada: limpa dados autenticados
     http_response_code(401);
     echo json_encode(["sucesso" => false, "erro" => "Faça login para enviar mensagens."]);
     exit;
@@ -95,9 +96,10 @@ try {
         "mensagem" => "Mensagem enviada com sucesso!",
     ]);
 } catch (Exception $e) {
+    error_log("Erro ao enviar mensagem do ticket #{$ticketId}: " . $e->getMessage());
     http_response_code(422);
     echo json_encode([
         "sucesso" => false,
-        "erro" => $e->getMessage(),
+        "erro" => "Erro ao processar solicitação. Tente novamente.",
     ]);
 }

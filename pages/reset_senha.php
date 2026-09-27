@@ -8,6 +8,10 @@ require __DIR__ . "/../includes/header.php";
 
 <h1 class="page-title">Redefinir senha</h1>
 
+<?php $msg = flash('reset_msg'); if ($msg): ?>
+    <div class="alert alert-error"><?= e($msg) ?></div>
+<?php endif; ?>
+
 <?php if (!$token): ?>
     <div class="alert alert-error">Token inválido.</div>
 <?php else: ?>

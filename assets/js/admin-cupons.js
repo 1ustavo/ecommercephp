@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("cupom-id").value = "";
     }
 
-    btnNovo.addEventListener("click", function () {
+    btnNovo?.addEventListener("click", function () {
         modalTitulo.textContent = "Novo Cupom";
         abrirModal();
     });

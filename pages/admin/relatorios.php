@@ -2,6 +2,13 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
+// Página restrita a ADMIN/GERENTE — FUNCIONARIO é redirecionado
+// (a autorização real continua no requererPapel() das APIs)
+if (!temPapel("ADMIN", "GERENTE")) {
+    header("Location: " . pageUrl("admin/pedidos_pendentes.php"));
+    exit;
+}
+
 $pageTitle = "Relatórios";
 $currentAdminPage = "relatorios";
 require __DIR__ . "/../../includes/admin-header.php";
@@ -17,6 +24,10 @@ $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
 ?>
 
 <h1 class="page-title">Relatórios</h1>
+
+<?php if (!temPapel("ADMIN", "GERENTE")): ?>
+    <div class="alert alert-error">Acesso restrito a ADMIN/GERENTE. Relatórios financeiros não estão disponíveis para o seu papel.</div>
+<?php else: ?>
 <p class="page-subtitle">Acompanhe o desempenho de vendas por mês ou no total geral.</p>
 
 <!-- Seletor de mês -->
@@ -37,6 +48,6 @@ $paginas = paginacaoJanela($paginaAtual, $totalPaginas, 2);
 <!-- Corpo do relatório (preenchido via AJAX) -->
 <div id="relatorio-body"></div>
 
-
 <script src="<?= asset("js/admin-relatorios.js") ?>"></script>
+<?php endif; ?>
 <?php require __DIR__ . "/../../includes/admin-footer.php"; ?>

@@ -3,6 +3,13 @@ require_once __DIR__ . "/../config/bootstrap.php";
 
 $auth = new Auth();
 $auth->verificarAdmin();
+
+// Matriz de papéis (mesma de requererPapel()): ADMIN/GERENTE gerenciam
+// produtos, categorias, cupons, relatórios e auditoria; FUNCIONARIO tem
+// apenas leitura de pedidos (fila/pendentes) e resposta a tickets.
+$podeGerenciar = temPapel("ADMIN", "GERENTE");
+$podeAprovarPedido = temPapel("ADMIN", "GERENTE");
+$podeResponderTicket = temPapel("ADMIN", "GERENTE", "FUNCIONARIO");
 $pageTitle = $pageTitle ?? "Admin";
 $currentAdminPage = $currentAdminPage ?? "";
 ?>
@@ -43,14 +50,19 @@ $currentAdminPage = $currentAdminPage ?? "";
     <div class="admin-sidebar-overlay" id="admin-sidebar-overlay"></div>
     <aside class="admin-sidebar" id="admin-sidebar">
         <a href="<?= pageUrl("admin/dashboard.php") ?>" class="<?= $currentAdminPage === "dashboard" ? "active" : "" ?>">Dashboard</a>
-        <a href="<?= pageUrl("admin/produtos.php") ?>" class="<?= $currentAdminPage === "produtos" ? "active" : "" ?>">Produtos</a>
-        <a href="<?= pageUrl("admin/categorias.php") ?>" class="<?= $currentAdminPage === "categorias" ? "active" : "" ?>">Categorias</a>
-        <a href="<?= pageUrl("admin/cupons.php") ?>" class="<?= $currentAdminPage === "cupons" ? "active" : "" ?>">Cupons</a>
+        <?php if ($podeGerenciar): ?>
+            <a href="<?= pageUrl("admin/produtos.php") ?>" class="<?= $currentAdminPage === "produtos" ? "active" : "" ?>">Produtos</a>
+            <a href="<?= pageUrl("admin/categorias.php") ?>" class="<?= $currentAdminPage === "categorias" ? "active" : "" ?>">Categorias</a>
+            <a href="<?= pageUrl("admin/cupons.php") ?>" class="<?= $currentAdminPage === "cupons" ? "active" : "" ?>">Cupons</a>
+            <a href="<?= pageUrl("admin/reembolsos.php") ?>" class="<?= $currentAdminPage === "reembolsos" ? "active" : "" ?>">Reembolsos</a>
+        <?php endif; ?>
         <a href="<?= pageUrl("admin/pedidos_pendentes.php") ?>" class="<?= $currentAdminPage === "pedidos_pendentes" ? "active" : "" ?>">Pedidos Pendentes</a>
         <a href="<?= pageUrl("admin/fila.php") ?>" class="<?= $currentAdminPage === "fila" ? "active" : "" ?>">Fila de Pedidos</a>
         <a href="<?= pageUrl("admin/pedidos.php") ?>" class="<?= $currentAdminPage === "pedidos" ? "active" : "" ?>">Pedidos</a>
-        <a href="<?= pageUrl("admin/relatorios.php") ?>" class="<?= $currentAdminPage === "relatorios" ? "active" : "" ?>">Relatórios</a>
-        <a href="<?= pageUrl("admin/auditoria.php") ?>" class="<?= $currentAdminPage === "auditoria" ? "active" : "" ?>">Auditoria</a>
+        <?php if ($podeGerenciar): ?>
+            <a href="<?= pageUrl("admin/relatorios.php") ?>" class="<?= $currentAdminPage === "relatorios" ? "active" : "" ?>">Relatórios</a>
+            <a href="<?= pageUrl("admin/auditoria.php") ?>" class="<?= $currentAdminPage === "auditoria" ? "active" : "" ?>">Auditoria</a>
+        <?php endif; ?>
         <a href="<?= pageUrl("admin/tickets.php") ?>" class="<?= $currentAdminPage === "tickets" ? "active" : "" ?>">Tickets SAC</a>
     </aside>
     <div class="admin-content">

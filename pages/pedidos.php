@@ -19,10 +19,17 @@ $order = null;
 
 if ($orderId) {
     $order = Pedido::buscar($orderId);
-    if (!$order || $order["usuario_id"] !== $usuarioId) {
+    // Cast explícito: comparação int vs int (valor do banco pode vir como string)
+    if (!$order || (int) $order["usuario_id"] !== $usuarioId) {
         $order = null;
     }
 }
+
+// Reembolso: solicitação existente deste pedido e elegibilidade
+// (mesma regra do modelo: PAGO/ENVIADO/ENTREGUE; pode re-solicitar após RECUSADO)
+$reembolsoPedido = $order ? Reembolso::buscarPorPedido((int) $order["id"], $usuarioId) : null;
+$reembolsoElegivel = $order && in_array($order["status"], Reembolso::STATUS_ELEGIVEIS, true)
+    && (!$reembolsoPedido || $reembolsoPedido["status"] === "RECUSADO");
 
 $pageTitle = "Meus Pedidos";
 require __DIR__ . "/../includes/header.php";
@@ -96,6 +103,25 @@ $error = flash("checkout_error");
                style="margin-top: 16px; display: inline-block;">
                 💬 Ver Meu Atendimento
             </a>
+        <?php endif; ?>
+
+        <?php if ($reembolsoPedido): ?>
+            <p style="margin-top:16px">
+                <strong>Reembolso:</strong>
+                <span class="badge <?= $reembolsoPedido["status"] === "APROVADO" ? "badge-pago" : ($reembolsoPedido["status"] === "RECUSADO" ? "badge-cancelado" : "badge-pendente") ?>">
+                    <?= e($reembolsoPedido["status"]) ?>
+                </span>
+                <?php if ($reembolsoPedido["status"] === "RECUSADO" && !empty($reembolsoPedido["motivo_recusa"])): ?>
+                    <small style="color:var(--cinza-600)"> — Motivo: <?= e($reembolsoPedido["motivo_recusa"]) ?></small>
+                <?php endif; ?>
+            </p>
+        <?php endif; ?>
+
+        <?php if ($reembolsoElegivel): ?>
+            <button type="button" class="btn btn-outline" id="btn-solicitar-reembolso"
+                    data-pedido-id="<?= (int) $order["id"] ?>" style="margin-top:16px">
+                Solicitar reembolso
+            </button>
         <?php endif; ?>
         
         <a href="<?= pageUrl("pedidos.php") ?>" class="btn btn-gray" style="margin-top:16px;display:inline-block;margin-left: 8px;">Voltar para pedidos</a>
@@ -255,6 +281,62 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+<!-- Modal: solicitar reembolso (mesmo padrão do modal de ticket acima) -->
+<div id="modal-reembolso" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:8px; padding:24px; max-width:480px; width:90%;">
+        <h2 style="font-size:20px; font-weight:600; margin:0 0 8px;">Solicitar reembolso — Pedido #<span id="reembolso-pedido-id"></span></h2>
+        <div class="form-group">
+            <label class="form-label" for="motivo-reembolso">Motivo do reembolso *</label>
+            <textarea id="motivo-reembolso" class="form-control" rows="4"
+                      placeholder="Descreva o motivo (mínimo 10 caracteres)..."></textarea>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+            <button type="button" class="btn btn-gray" id="btn-cancelar-reembolso">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btn-confirmar-reembolso">Enviar solicitação</button>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
+<script>
+(function () {
+    const csrfToken = document.getElementById("csrf-token")?.value || "";
+    const modal = document.getElementById("modal-reembolso");
+    const btn = document.getElementById("btn-solicitar-reembolso");
+    const btnConfirmar = document.getElementById("btn-confirmar-reembolso");
+    const btnCancelar = document.getElementById("btn-cancelar-reembolso");
+
+    const abrirModal = () => {
+        const span = document.getElementById("reembolso-pedido-id");
+        if (span) span.textContent = btn?.dataset.pedidoId || "";
+        if (modal) modal.style.display = "flex";
+    };
+    const fecharModal = () => { if (modal) modal.style.display = "none"; };
+
+    btn?.addEventListener("click", abrirModal);
+    btnCancelar?.addEventListener("click", fecharModal);
+    modal?.addEventListener("click", (e) => { if (e.target === modal) fecharModal(); });
+
+    btnConfirmar?.addEventListener("click", async () => {
+        const motivo = document.getElementById("motivo-reembolso")?.value.trim() || "";
+        if (motivo.length < 10) { alert("Descreva o motivo em pelo menos 10 caracteres."); return; }
+        btnConfirmar.disabled = true;
+        try {
+            const res = await fetch("<?= apiUrl("solicitar_reembolso.php") ?>", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+                body: JSON.stringify({ pedido_id: btn?.dataset.pedidoId, motivo })
+            });
+            const r = await res.json();
+            if (r.sucesso) { location.reload(); }
+            else { alert(r.erro || "Erro ao solicitar reembolso."); btnConfirmar.disabled = false; }
+        } catch (e) {
+            alert("Erro de conexão. Tente novamente.");
+            btnConfirmar.disabled = false;
+        }
+    });
+})();
+</script>
                     "X-CSRF-Token": csrfToken,
                 },
                 body: JSON.stringify({

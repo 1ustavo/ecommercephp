@@ -13,8 +13,8 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Guard de admin para API: retorna JSON 401/403 (nao redirect)
-requererAdminApi();
+// Guard de API com papel exigido (JSON 401/403, não redirect)
+requererPapel(["ADMIN", "GERENTE", "FUNCIONARIO"]);
 
 header("Content-Type: application/json; charset=utf-8");
 

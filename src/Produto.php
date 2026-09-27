@@ -8,9 +8,11 @@ class Produto
 
         $sql = "
             SELECT p.*, c.nome AS categoria_nome, c.slug AS categoria_slug,
+                   m.nome AS marca_nome, m.slug AS marca_slug,
                    (SELECT url FROM produto_imagens WHERE produto_id = p.id AND principal = TRUE LIMIT 1) AS imagem
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.ativo = TRUE
         ";
         $params = [];
@@ -18,6 +20,11 @@ class Produto
         if (!empty($filtros["categoria"])) {
             $sql .= " AND c.slug = ?";
             $params[] = $filtros["categoria"];
+        }
+
+        if (!empty($filtros["marca"])) {
+            $sql .= " AND m.slug = ?";
+            $params[] = $filtros["marca"];
         }
 
         if (!empty($filtros["busca"])) {
@@ -75,6 +82,7 @@ class Produto
             SELECT COUNT(*)
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.ativo = TRUE
         ";
         $params = [];
@@ -82,6 +90,11 @@ class Produto
         if (!empty($filtros["categoria"])) {
             $sql .= " AND c.slug = ?";
             $params[] = $filtros["categoria"];
+        }
+
+        if (!empty($filtros["marca"])) {
+            $sql .= " AND m.slug = ?";
+            $params[] = $filtros["marca"];
         }
 
         if (!empty($filtros["busca"])) {
@@ -114,9 +127,11 @@ class Produto
         global $pdo;
 
         $stmt = $pdo->prepare("
-            SELECT p.*, c.nome AS categoria_nome, c.slug AS categoria_slug
+            SELECT p.*, c.nome AS categoria_nome, c.slug AS categoria_slug,
+                   m.nome AS marca_nome, m.slug AS marca_slug
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.slug = ? AND p.ativo = TRUE
         ");
         $stmt->execute([$slug]);
@@ -129,14 +144,27 @@ class Produto
         global $pdo;
 
         $stmt = $pdo->prepare("
-            SELECT p.*, c.nome AS categoria_nome, c.slug AS categoria_slug
+            SELECT p.*, c.nome AS categoria_nome, c.slug AS categoria_slug,
+                   m.nome AS marca_nome, m.slug AS marca_slug
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.id = ?
         ");
         $stmt->execute([$id]);
 
-        return $stmt->fetch() ?: null;
+        $produto = $stmt->fetch() ?: null;
+
+        // Garante que peso e dimensões estejam sempre presentes no retorno
+        // (preenche o formulário de edição mesmo se a coluna ainda não existir)
+        if ($produto) {
+            $produto["peso_gramas"] = (int) ($produto["peso_gramas"] ?? 300);
+            $produto["comprimento_cm"] = (int) ($produto["comprimento_cm"] ?? 16);
+            $produto["largura_cm"] = (int) ($produto["largura_cm"] ?? 11);
+            $produto["altura_cm"] = (int) ($produto["altura_cm"] ?? 2);
+        }
+
+        return $produto;
     }
 
     public static function variacoes(int $produtoId): array
@@ -155,7 +183,7 @@ class Produto
     {
         global $pdo;
 
-        $stmt = $pdo->prepare("SELECT * FROM produto_imagens WHERE produto_id = ? ORDER BY principal DESC");
+        $stmt = $pdo->prepare("SELECT * FROM produto_imagens WHERE produto_id = ? ORDER BY ordem ASC, principal DESC, id ASC");
         $stmt->execute([$produtoId]);
 
         return $stmt->fetchAll();
@@ -228,22 +256,31 @@ class Produto
         return $pdo->query("SELECT * FROM categorias WHERE ativo = TRUE ORDER BY nome")->fetchAll();
     }
 
+    public static function marcas(): array
+    {
+        global $pdo;
+
+        return $pdo->query("SELECT * FROM marcas WHERE ativo = TRUE ORDER BY nome")->fetchAll();
+    }
+
     public static function criar(array $dados): int
     {
         global $pdo;
 
         $stmt = $pdo->prepare("
             INSERT INTO produtos (
-                categoria_id, nome, slug, descricao, descricao_curta,
+                categoria_id, marca_id, nome, slug, descricao, descricao_curta,
                 preco, estoque, ativo, ean, sku, ncm,
+                peso_gramas, comprimento_cm, largura_cm, altura_cm,
                 meta_titulo, meta_descricao,
                 palavras_chave_principais, palavras_chave_secundarias
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
         ");
         $stmt->execute([
             $dados["categoria_id"] ?? null,
+            $dados["marca_id"] ?? null,
             $dados["nome"],
             $dados["slug"] ?? slugify($dados["nome"]),
             $dados["descricao"] ?? null,
@@ -254,6 +291,10 @@ class Produto
             $dados["ean"] ?? null,
             $dados["sku"] ?? null,
             $dados["ncm"] ?? null,
+            $dados["peso_gramas"] ?? 300,
+            $dados["comprimento_cm"] ?? 16,
+            $dados["largura_cm"] ?? 11,
+            $dados["altura_cm"] ?? 2,
             $dados["meta_titulo"] ?? null,
             $dados["meta_descricao"] ?? null,
             $dados["palavras_chave_principais"] ?? null,
@@ -270,6 +311,7 @@ class Produto
         $stmt = $pdo->prepare("
             UPDATE produtos
             SET categoria_id = ?,
+                marca_id = ?,
                 nome = ?,
                 slug = ?,
                 descricao = ?,
@@ -280,6 +322,10 @@ class Produto
                 ean = ?,
                 sku = ?,
                 ncm = ?,
+                peso_gramas = ?,
+                comprimento_cm = ?,
+                largura_cm = ?,
+                altura_cm = ?,
                 meta_titulo = ?,
                 meta_descricao = ?,
                 palavras_chave_principais = ?,
@@ -289,6 +335,7 @@ class Produto
         ");
         $stmt->execute([
             $dados["categoria_id"] ?? null,
+            $dados["marca_id"] ?? null,
             $dados["nome"],
             $dados["slug"] ?? slugify($dados["nome"]),
             $dados["descricao"] ?? null,
@@ -299,6 +346,10 @@ class Produto
             $dados["ean"] ?? null,
             $dados["sku"] ?? null,
             $dados["ncm"] ?? null,
+            $dados["peso_gramas"] ?? 300,
+            $dados["comprimento_cm"] ?? 16,
+            $dados["largura_cm"] ?? 11,
+            $dados["altura_cm"] ?? 2,
             $dados["meta_titulo"] ?? null,
             $dados["meta_descricao"] ?? null,
             $dados["palavras_chave_principais"] ?? null,
@@ -316,9 +367,10 @@ class Produto
         $offset = ($page - 1) * $limit;
 
         $stmt = $pdo->prepare("
-            SELECT p.*, c.nome AS categoria_nome
+            SELECT p.*, c.nome AS categoria_nome, m.nome AS marca_nome
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN marcas m ON m.id = p.marca_id
             ORDER BY p.created_at DESC
             LIMIT ? OFFSET ?
         ");

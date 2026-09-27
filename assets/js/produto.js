@@ -2,115 +2,48 @@ document.addEventListener("DOMContentLoaded", function () {
     const mainImage = document.getElementById("main-product-image");
     const thumbs = document.querySelectorAll(".product-gallery-thumb");
     const mainImageContainer = document.getElementById("main-image-container");
+    const prevBtn = document.getElementById("gallery-prev");
+    const nextBtn = document.getElementById("gallery-next");
 
-    // Galeria de miniaturas
-    if (thumbs.length > 0 && mainImage) {
+    // Carrossel de imagens
+    if (mainImage && thumbs.length > 0) {
+        let currentIndex = 0;
+
+        function mostrarImagem(index) {
+            const total = thumbs.length;
+            currentIndex = (index + total) % total;
+
+            const thumb = thumbs[currentIndex];
+            mainImage.src = thumb.dataset.src;
+
+            thumbs.forEach((t) => t.classList.remove("active"));
+            thumb.classList.add("active");
+            mainImage.dataset.currentIndex = currentIndex;
+        }
+
+        // Clique nas miniaturas
         thumbs.forEach((thumb) => {
             thumb.addEventListener("click", function () {
-                const src = this.dataset.src;
-                const index = parseInt(this.dataset.index);
-
-                mainImage.src = src;
-
-                thumbs.forEach((t) => t.classList.remove("active"));
-                this.classList.add("active");
-                mainImage.dataset.currentIndex = index;
+                mostrarImagem(parseInt(this.dataset.index));
             });
+        });
+
+        // Botões prev/next
+        if (prevBtn) {
+            prevBtn.addEventListener("click", () => mostrarImagem(currentIndex - 1));
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener("click", () => mostrarImagem(currentIndex + 1));
+        }
+
+        // Navegação por teclado
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowLeft") mostrarImagem(currentIndex - 1);
+            if (e.key === "ArrowRight") mostrarImagem(currentIndex + 1);
         });
 
         // Define índice inicial
         mainImage.dataset.currentIndex = 0;
-    }
-
-    // Lightbox
-    if (mainImageContainer && mainImage) {
-        mainImageContainer.addEventListener("click", function () {
-            const images = JSON.parse(mainImage.dataset.images || "[]");
-            if (images.length === 0) return;
-
-            const currentIndex = parseInt(mainImage.dataset.currentIndex || 0);
-            abrirLightbox(images, currentIndex);
-        });
-    }
-
-    function abrirLightbox(images, currentIndex) {
-        // Cria lightbox
-        const lightbox = document.createElement("div");
-        lightbox.className = "lightbox";
-        lightbox.id = "lightbox";
-
-        // Imagem atual
-        const img = document.createElement("img");
-        img.src = images[currentIndex];
-        img.alt = "Imagem ampliada";
-        lightbox.appendChild(img);
-
-        // Botão fechar
-        const closeBtn = document.createElement("button");
-        closeBtn.className = "lightbox-close";
-        closeBtn.innerHTML = "×";
-        closeBtn.setAttribute("aria-label", "Fechar lightbox");
-        lightbox.appendChild(closeBtn);
-
-        // Navegação anterior
-        if (images.length > 1) {
-            const prevBtn = document.createElement("button");
-            prevBtn.className = "lightbox-nav lightbox-prev";
-            prevBtn.innerHTML = "‹";
-            prevBtn.setAttribute("aria-label", "Imagem anterior");
-            lightbox.appendChild(prevBtn);
-
-            const nextBtn = document.createElement("button");
-            nextBtn.className = "lightbox-nav lightbox-next";
-            nextBtn.innerHTML = "›";
-            nextBtn.setAttribute("aria-label", "Próxima imagem");
-            lightbox.appendChild(nextBtn);
-
-            let index = currentIndex;
-
-            prevBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                index = (index - 1 + images.length) % images.length;
-                img.src = images[index];
-            });
-
-            nextBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                index = (index + 1) % images.length;
-                img.src = images[index];
-            });
-
-            // Navegação por teclado
-            document.addEventListener("keydown", function keyHandler(e) {
-                if (!document.getElementById("lightbox")) return;
-
-                if (e.key === "ArrowLeft") {
-                    index = (index - 1 + images.length) % images.length;
-                    img.src = images[index];
-                } else if (e.key === "ArrowRight") {
-                    index = (index + 1) % images.length;
-                    img.src = images[index];
-                } else if (e.key === "Escape") {
-                    fecharLightbox();
-                }
-            });
-        }
-
-        // Fechar lightbox
-        closeBtn.addEventListener("click", fecharLightbox);
-        lightbox.addEventListener("click", function (e) {
-            if (e.target === lightbox) {
-                fecharLightbox();
-            }
-        });
-
-        document.body.appendChild(lightbox);
-        document.body.style.overflow = "hidden";
-
-        function fecharLightbox() {
-            lightbox.remove();
-            document.body.style.overflow = "";
-        }
     }
 
     // Formulário de adicionar ao carrinho
@@ -129,10 +62,14 @@ document.addEventListener("DOMContentLoaded", function () {
             fetch(this.action, {
                 method: "POST",
                 body: formData,
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
             })
             .then((response) => response.json())
             .then((data) => {
-                if (data.sucesso) {
+                if (data.success) {
                     mostrarMensagem("Produto adicionado ao carrinho com sucesso!", "success");
                     btn.textContent = "Adicionado!";
                     setTimeout(() => {
@@ -140,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         btn.disabled = false;
                     }, 2000);
                 } else {
-                    mostrarMensagem(data.erro || "Erro ao adicionar produto", "error");
+                    mostrarMensagem(data.message || "Erro ao adicionar produto", "error");
                     btn.textContent = originalText;
                     btn.disabled = false;
                 }
@@ -213,6 +150,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (estoqueDisplay) {
                 estoqueDisplay.textContent = estoque;
+            }
+
+            // Atualiza o max do input de quantidade conforme o estoque da variação
+            const qtdInput = document.querySelector('input[name="quantidade"]');
+            if (qtdInput) {
+                qtdInput.max = estoque;
+                qtdInput.dataset.estoque = estoque;
+                if (parseInt(qtdInput.value) > estoque) {
+                    qtdInput.value = estoque > 0 ? estoque : 1;
+                }
             }
         });
     });

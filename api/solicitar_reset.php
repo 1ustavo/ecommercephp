@@ -28,12 +28,19 @@ $stmt->execute([$email]);
 $user = $stmt->fetch();
 
 // Sempre responder com sucesso para evitar enumeracao de emails
+// Token cru (256 bits) vai SOMENTE por email; no banco salvamos apenas o hash.
 $token = bin2hex(random_bytes(32));
+$tokenHash = hash('sha256', $token);
 $expires = (new DateTime('+1 hour'))->format('Y-m-d H:i:s');
 
 try {
+    // Uso único: invalida (deleta) TODOS os tokens anteriores do mesmo
+    // destinatário antes de inserir o novo — assim só o link mais recente
+    // vale, mesmo se o antigo ainda não tiver expirado.
+    $pdo->prepare('DELETE FROM password_resets WHERE email = ?')->execute([$email]);
+
     $stmt = $pdo->prepare('INSERT INTO password_resets (usuario_id, email, token, expires_at) VALUES (?, ?, ?, ?)');
-    $stmt->execute([$user['id'] ?? null, $email, $token, $expires]);
+    $stmt->execute([$user['id'] ?? null, $email, $tokenHash, $expires]);
 } catch (Exception $e) {
     error_log('Erro ao criar token de reset: ' . $e->getMessage());
 }

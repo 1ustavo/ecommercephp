@@ -2,13 +2,21 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
+// Página restrita a ADMIN/GERENTE — FUNCIONARIO é redirecionado
+// (a autorização real continua no requererPapel() das APIs)
+if (!temPapel("ADMIN", "GERENTE")) {
+    header("Location: " . pageUrl("admin/pedidos_pendentes.php"));
+    exit;
+}
+
 $pageTitle = "Gestão de Produtos";
 $currentAdminPage = "produtos";
 $extraJs = "admin-produtos.js";
 require __DIR__ . "/../../includes/admin-header.php";
 
-// Categorias para o select (do banco)
+// Categorias e marcas para os selects (do banco)
 $categorias = Produto::categorias();
+$marcas = Produto::marcas();
 
 // Modo edição: se houver ?id=, carrega o produto do banco
 $produtoEditando = null;
@@ -34,8 +42,8 @@ if ($produtoId > 0) {
     }
 }
 
-// Paginação — 20 produtos por página
-$limitePorPagina = 20;
+// Paginação — 10 produtos por página
+$limitePorPagina = 10;
 $paginaAtual = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
 $totalProdutos = Produto::contarTodosAdmin();
 $totalPaginas = max(1, (int) ceil($totalProdutos / $limitePorPagina));
@@ -62,7 +70,9 @@ function valorCampo(?array $produto, string $campo): string
         <h1><?= $produtoEditando ? "Editar: " . e($produtoEditando["nome"]) : "Cadastrar Novo Produto" ?></h1>
         <div class="produto-form-actions">
             <a href="<?= pageUrl("admin/produtos.php") ?>" class="btn btn-gray">Voltar à Lista</a>
-            <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">Salvar Produto</button>
+            <?php if ($podeGerenciar): ?>
+                <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">Salvar Produto</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -101,7 +111,11 @@ function valorCampo(?array $produto, string $campo): string
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="<?= pageUrl("admin/produtos.php?id=" . $produto["id"]) ?>" class="btn btn-sm btn-outline">Editar</a>
+                                        <?php if ($podeGerenciar): ?>
+                                            <a href="<?= pageUrl("admin/produtos.php?id=" . $produto["id"]) ?>" class="btn btn-sm btn-outline">Editar</a>
+                                        <?php else: ?>
+                                            <span style="color:var(--cinza-500);font-size:0.85rem">Somente leitura</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -217,6 +231,23 @@ function valorCampo(?array $produto, string $campo): string
                                    required>
                             <div class="invalid-feedback">O nome do produto deve ter pelo menos 3 caracteres.</div>
                         </div>
+                        <!-- Marca (select do banco) -->
+                        <div class="form-group col-12">
+                            <label class="form-label" for="produto-marca">Marca</label>
+                            <select class="form-control" id="produto-marca" name="marca_id">
+                                <option value="">— Produto sem marca —</option>
+                                <?php foreach ($marcas as $marca): ?>
+                                    <option value="<?= (int) $marca["id"] ?>"
+                                        <?= $produtoEditando && (int) ($produtoEditando["marca_id"] ?? 0) === (int) $marca["id"] ? "selected" : "" ?>>
+                                        <?= e($marca["nome"]) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="suggestion-hint">
+                                <span class="hint-icon"></span>
+                                Selecione a marca do produto ou deixe "Produto sem marca".
+                            </p>
+                        </div>
 
                         <!-- Descrição curta -->
                         <div class="form-group col-12">
@@ -308,6 +339,63 @@ function valorCampo(?array $produto, string $campo): string
                                 <option value="0" <?= $produtoEditando && !$produtoEditando["ativo"] ? "selected" : "" ?>>Inativo</option>
                             </select>
                         </div>
+
+                        <!-- Peso e dimensões (para frete e ficha técnica) -->
+                        <div class="form-group col-4">
+                            <label class="form-label" for="produto-peso">Peso (g) *</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="produto-peso"
+                                   name="peso_gramas"
+                                   value="<?= valorCampo($produtoEditando, "peso_gramas") ?>"
+                                   min="1"
+                                   step="1"
+                                   placeholder="300"
+                                   required>
+                            <div class="invalid-feedback">O peso deve ser um número positivo.</div>
+                        </div>
+
+                        <div class="form-group col-4">
+                            <label class="form-label" for="produto-comprimento">Comprimento (cm) *</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="produto-comprimento"
+                                   name="comprimento_cm"
+                                   value="<?= valorCampo($produtoEditando, "comprimento_cm") ?>"
+                                   min="1"
+                                   step="1"
+                                   placeholder="16"
+                                   required>
+                            <div class="invalid-feedback">O comprimento deve ser um número positivo.</div>
+                        </div>
+
+                        <div class="form-group col-4">
+                            <label class="form-label" for="produto-largura">Largura (cm) *</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="produto-largura"
+                                   name="largura_cm"
+                                   value="<?= valorCampo($produtoEditando, "largura_cm") ?>"
+                                   min="1"
+                                   step="1"
+                                   placeholder="11"
+                                   required>
+                            <div class="invalid-feedback">A largura deve ser um número positivo.</div>
+                        </div>
+
+                        <div class="form-group col-4">
+                            <label class="form-label" for="produto-altura">Altura (cm) *</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="produto-altura"
+                                   name="altura_cm"
+                                   value="<?= valorCampo($produtoEditando, "altura_cm") ?>"
+                                   min="1"
+                                   step="1"
+                                   placeholder="2"
+                                   required>
+                            <div class="invalid-feedback">A altura deve ser um número positivo.</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -332,9 +420,10 @@ function valorCampo(?array $produto, string $campo): string
                                  draggable="<?= $imagemAtual ? "true" : "false" ?>">
                                 <input type="file" 
                                        accept="image/jpeg,image/png,image/webp,image/gif" 
-                                       name="imagem_<?= $i ?>"
+                                       name="imagens[]"
                                        data-index="<?= $i - 1 ?>">
                                 <?php if ($imagemAtual && !empty($imagemAtual["url"])): ?>
+                                    <input type="hidden" name="imagem_existente[]" value="<?= e($imagemAtual["url"]) ?>">
                                     <img src="<?= e($imagemAtual["url"]) ?>" 
                                          alt="Imagem <?= $i ?>" 
                                          data-url="<?= e($imagemAtual["url"]) ?>"

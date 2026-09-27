@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . "/../config/bootstrap.php";
 
+// ATENÇÃO: SVG NÃO é aceito — pode conter JavaScript inline e virar XSS armazenado.
+// Este seed agora reverte URLs .svg para placeholder (o frontend renderiza cor sólida).
 try {
     $updates = [
         'camiseta-basica-verde' => 'uploads/produtos/camiseta-basica-verde.svg',
@@ -12,10 +14,18 @@ try {
     ];
 
     foreach ($updates as $slug => $path) {
+        // Reverte para placeholder (frontend renderiza cor sólida)
         $placeholder = 'placeholder:' . $slug;
         $stmt = $pdo->prepare('UPDATE produto_imagens SET url = ? WHERE url = ?');
-        $stmt->execute([$path, $placeholder]);
-        echo "Updated $slug -> $path\n";
+        $stmt->execute([$placeholder, $path]);
+        echo "Reverted $path -> placeholder (SVG removido por segurança)\n";
+
+        // Remove o arquivo físico .svg se existir
+        $caminhoFs = __DIR__ . "/../" . $path;
+        if (is_file($caminhoFs)) {
+            @unlink($caminhoFs);
+            echo "  Removido arquivo físico: $path\n";
+        }
     }
 
     echo "Done\n";

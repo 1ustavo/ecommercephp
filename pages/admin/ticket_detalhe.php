@@ -103,6 +103,7 @@ $prioridadeClass = match ($ticket["prioridade"]) {
         <!-- Ações Rápidas -->
         <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
             <form method="POST" action="<?= pageUrl("admin/ticket_acao.php") ?>" style="display: inline;">
+                <?= csrf_input() ?>
                 <input type="hidden" name="ticket_id" value="<?= $ticketId ?>">
                 <input type="hidden" name="acao" value="status">
                 <select name="status" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
@@ -116,6 +117,7 @@ $prioridadeClass = match ($ticket["prioridade"]) {
             </form>
 
             <form method="POST" action="<?= pageUrl("admin/ticket_acao.php") ?>" style="display: inline;">
+                <?= csrf_input() ?>
                 <input type="hidden" name="ticket_id" value="<?= $ticketId ?>">
                 <input type="hidden" name="acao" value="prioridade">
                 <select name="prioridade" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
@@ -129,6 +131,7 @@ $prioridadeClass = match ($ticket["prioridade"]) {
             </form>
 
             <form method="POST" action="<?= pageUrl("admin/ticket_acao.php") ?>" style="display: inline;">
+                <?= csrf_input() ?>
                 <input type="hidden" name="ticket_id" value="<?= $ticketId ?>">
                 <input type="hidden" name="acao" value="categoria">
                 <select name="categoria" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">

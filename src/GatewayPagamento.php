@@ -153,7 +153,37 @@ class GatewayPagamento
         curl_close($ch);
 
         if ($httpCode !== 201) {
-            error_log("Mercado Pago error: " . $response);
+            // Redige campos sensíveis antes de logar (tokens, dados de cartão, etc.)
+            // A resposta do MP pode conter payment_methods, card tokens, dados do
+            // comprador — apenas logamos status HTTP e corpo sem campos sensíveis.
+            $resumoSeguro = "";
+            $respostaDecodificada = json_decode($response, true);
+            if (is_array($respostaDecodificada)) {
+                // Lista negra de chaves sensíveis — nunca logadas
+                $chavesSensiveis = [
+                    "card_token", "card_number", "last_four_digits", "security_code",
+                    "cvv", "token", "access_token", "authorization", "init_point",
+                    "sandbox_init_point", "client_secret", "payer_email",
+                ];
+                foreach ($respostaDecodificada as $chave => $valor) {
+                    if (in_array(strtolower($chave), $chavesSensiveis, true)) {
+                        $respostaDecodificada[$chave] = "*** REDACTED ***";
+                    } elseif (is_array($valor)) {
+                        // Recursivo para objetos aninhados (card, payer, metadata)
+                        foreach ($valor as $subChave => $subValor) {
+                            if (in_array(strtolower($subChave), $chavesSensiveis, true)) {
+                                $respostaDecodificada[$chave][$subChave] = "*** REDACTED ***";
+                            }
+                        }
+                    }
+                }
+                $resumoLimpo = json_encode($respostaDecodificada, JSON_UNESCAPED_UNICODE);
+                $resumoLimpo = mb_substr($resumoLimpo, 0, 2000); // limita tamanho
+                $respostaSegura = "HTTP {$httpCode} | " . $resumoLimpo;
+            } else {
+                $respostaSegura = "HTTP {$httpCode} | resposta não-JSON (truncada): " . mb_substr((string) $response, 0, 100);
+            }
+            error_log("Mercado Pago error: " . $respostaSegura);
             return null;
         }
 

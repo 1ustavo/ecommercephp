@@ -30,5 +30,6 @@ if ($auth->login($email, $password)) {
     $auth->redirectPosLogin();
 }
 
-header("Location: " . pageUrl("login.php") . "?erro=credenciais");
+$erro = $auth->getLastError() === "bloqueado" ? "bloqueado" : "credenciais";
+header("Location: " . pageUrl("login.php") . "?erro={$erro}");
 exit;

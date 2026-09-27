@@ -14,7 +14,7 @@ require __DIR__ . "/../../includes/admin-header.php";
 $filtroStatus = $_GET["status"] ?? "todos";
 $filtroCategoria = $_GET["categoria"] ?? "todos";
 $pagina = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
-$limite = 20;
+$limite = 5;
 
 // Busca tickets
 $tickets = Ticket::listarTodos(

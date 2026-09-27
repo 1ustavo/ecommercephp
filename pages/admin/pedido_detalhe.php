@@ -52,30 +52,34 @@ require __DIR__ . "/../../includes/admin-header.php";
     </table>
 
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
-        <?php if ($pedido['status'] === 'AGUARDANDO_APROVACAO' || $pedido['status'] === 'PENDENTE' || $pedido['status'] === 'PAGO'): ?>
-            <button class="btn btn-primary" id="btn-aprovar">Aprovar pedido</button>
-            <button class="btn btn-danger" id="btn-recusar">Recusar pedido</button>
-        <?php endif; ?>
+        <?php if ($podeAprovarPedido): ?>
+            <?php if ($pedido['status'] === 'AGUARDANDO_APROVACAO' || $pedido['status'] === 'PENDENTE' || $pedido['status'] === 'PAGO'): ?>
+                <button class="btn btn-primary" id="btn-aprovar">Aprovar pedido</button>
+                <button class="btn btn-danger" id="btn-recusar">Recusar pedido</button>
+            <?php endif; ?>
 
-        <?php if ($pedido['status'] !== 'ENVIADO' && $pedido['status'] !== 'ENTREGUE' && $pedido['status'] !== 'CANCELADO' && $pedido['status'] !== 'RECUSADO'): ?>
-            <button class="btn btn-outline" id="btn-marcar-enviado">Marcar como ENVIADO</button>
-        <?php endif; ?>
+            <?php if ($pedido['status'] !== 'ENVIADO' && $pedido['status'] !== 'ENTREGUE' && $pedido['status'] !== 'CANCELADO' && $pedido['status'] !== 'RECUSADO'): ?>
+                <button class="btn btn-outline" id="btn-marcar-enviado">Marcar como ENVIADO</button>
+            <?php endif; ?>
 
-        <?php if ($pedido['status'] === 'ENVIADO'): ?>
-            <button class="btn btn-outline" id="btn-marcar-entregue">Marcar como ENTREGUE</button>
+            <?php if ($pedido['status'] === 'ENVIADO'): ?>
+                <button class="btn btn-outline" id="btn-marcar-entregue">Marcar como ENTREGUE</button>
+            <?php endif; ?>
         <?php endif; ?>
 
         <a class="btn btn-gray" href="<?= pageUrl('admin/pedidos.php') ?>">Voltar</a>
     </div>
 
-    <div id="recusa-form" style="display:none;margin-top:12px">
-        <label class="form-label">Motivo da recusa</label>
-        <textarea id="motivo-recusa" class="form-control" rows="3"></textarea>
-        <div style="margin-top:8px">
-            <button class="btn btn-danger" id="btn-confirmar-recusar">Confirmar recusa</button>
-            <button class="btn btn-gray" id="btn-cancelar-recusa">Cancelar</button>
+    <?php if ($podeAprovarPedido): ?>
+        <div id="recusa-form" style="display:none;margin-top:12px">
+            <label class="form-label">Motivo da recusa</label>
+            <textarea id="motivo-recusa" class="form-control" rows="3"></textarea>
+            <div style="margin-top:8px">
+                <button class="btn btn-danger" id="btn-confirmar-recusar">Confirmar recusa</button>
+                <button class="btn btn-gray" id="btn-cancelar-recusa">Cancelar</button>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 </div>
 
 <script>

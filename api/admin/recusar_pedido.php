@@ -16,8 +16,8 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Guard de admin para API: retorna JSON 401/403 (nao redirect)
-requererAdminApi();
+// Guard: apenas ADMIN/GERENTE podem recusar pedidos
+requererPapel(["ADMIN", "GERENTE"]);
 verify_csrf_from_request(true);
 
 // Carrega classe de notificacao (nao esta no bootstrap)

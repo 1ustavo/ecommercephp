@@ -9,11 +9,53 @@ if (file_exists($composerAutoload)) {
 require_once __DIR__ . "/env.php";
 loadEnv(__DIR__ . "/../.env");
 
+// ============================================================
+// CONFIGURAÇÃO DE ERRORS — controlada por APP_ENV, NÃO pelo php.ini
+// ============================================================
+// APP_ENV=production (ou não definido) → não exibe erros na tela
+// APP_ENV=development                → exibe erros para facilitar debug
+$appEnv = strtolower(trim($_ENV["APP_ENV"] ?? "production"));
+
+if ($appEnv === "development") {
+    // Dev: exibe todos os erros na tela
+    ini_set("display_errors", "1");
+    error_reporting(E_ALL);
+} else {
+    // Produção (padrão): loga todos os erros, mas NUNCA exibe na tela
+    ini_set("display_errors", "0");
+    ini_set("log_errors", "1");
+    error_reporting(E_ALL);
+}
+
 // Garantir que o conteúdo HTML seja servido como UTF-8 para evitar problemas de
 // encoding (caracteres como ç aparecendo como Ã§) quando o servidor não definir
 // explicitamente o charset.
 ini_set('default_charset', 'UTF-8');
 header('Content-Type: text/html; charset=utf-8');
+
+/**
+ * Detecta HTTPS mesmo atrás de proxy/load balancer com TLS termination
+ * (nginx, ALB, Cloudflare etc.), onde o $_SERVER["HTTPS"] não é populado
+ * pelo servidor web local.
+ */
+function isHttpsRequest(): bool
+{
+    if (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") {
+        return true;
+    }
+
+    // Proxy/LB encaminha o scheme original da requisição do cliente
+    $proto = strtolower($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? "");
+    if ($proto !== "" && str_contains($proto, "https")) {
+        return true;
+    }
+
+    if (($_SERVER["HTTP_X_FORWARDED_SSL"] ?? "") === "on") {
+        return true;
+    }
+
+    return false;
+}
 
 // ============================================================
 // SESSÃO SEGURA — configurações antes de iniciar a sessão
@@ -24,8 +66,8 @@ ini_set("session.cookie_httponly", "1");
 // SameSite=Strict (impede envio do cookie em requests cross-site)
 ini_set("session.cookie_samesite", "Strict");
 
-// Secure somente se HTTPS (produção)
-if (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") {
+// Secure somente se HTTPS (produção, inclusive atrás de proxy/LB)
+if (isHttpsRequest()) {
     ini_set("session.cookie_secure", "1");
 }
 
@@ -37,7 +79,7 @@ if (session_status() === PHP_SESSION_NONE) {
         "path" => "/",
         "httponly" => true,
         "samesite" => "Strict",
-        "secure" => !empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off",
+        "secure" => isHttpsRequest(),
     ]);
 }
 
@@ -82,16 +124,20 @@ require_once __DIR__ . "/../src/Cupom.php";
 require_once __DIR__ . "/../src/Produto.php";
 require_once __DIR__ . "/../src/Carrinho.php";
 require_once __DIR__ . "/../src/Pedido.php";
+require_once __DIR__ . "/../src/Reembolso.php";
 require_once __DIR__ . "/../src/Endereco.php";
 require_once __DIR__ . "/../src/Notificacao.php";
 require_once __DIR__ . "/../src/Cache.php";
 require_once __DIR__ . "/../src/Queue.php";
 require_once __DIR__ . "/../src/GatewayPagamento.php";
+require_once __DIR__ . "/../src/CorreiosToken.php";
+require_once __DIR__ . "/../src/CorreiosFrete.php";
 require_once __DIR__ . "/../src/Ticket.php";
 
 Cache::init();
 Queue::init();
 GatewayPagamento::init();
+CorreiosToken::init();
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

@@ -2,12 +2,10 @@
 
 require_once __DIR__ . "/../config/bootstrap.php";
 
-// Verifica se usuário está logado
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-if (!isset($_SESSION["usuario_id"])) {
+// Autenticação + sessão rigorosa (timeout de inatividade, fingerprint,
+// IP e session_version) — sem redirecionar, responde JSON 401
+if (!(new Auth())->validarSessao()) {
+    $_SESSION = []; // sessão inválida/expirada: limpa dados autenticados
     http_response_code(401);
     echo json_encode(["sucesso" => false, "erro" => "Faça login para abrir um chamado."]);
     exit;
@@ -79,9 +77,10 @@ try {
         "ticket_id" => $ticketId,
     ]);
 } catch (Exception $e) {
+    error_log("Erro ao abrir ticket para pedido #{$pedidoId}: " . $e->getMessage());
     http_response_code(422);
     echo json_encode([
         "sucesso" => false,
-        "erro" => $e->getMessage(),
+        "erro" => "Erro ao processar solicitação. Tente novamente.",
     ]);
 }

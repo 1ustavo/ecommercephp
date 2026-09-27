@@ -202,4 +202,45 @@ class Notificacao
 
         self::enviarEmail($u["email"], $assunto, $corpo);
     }
+
+    /**
+     * Notifica cliente que o reembolso foi aprovado.
+     */
+    public static function reembolsoAprovado(int $reembolsoId): void
+    {
+        $r = Reembolso::buscarPorId($reembolsoId);
+        if (!$r) {
+            return;
+        }
+
+        $assunto = "Reembolso aprovado — Pedido #{$r['pedido_id']} — EcoShop";
+        $corpo = self::templateHtml(
+            "Reembolso aprovado",
+            '<p>Seu pedido de reembolso referente ao pedido <strong>#' . (int) $r["pedido_id"] . '</strong> foi <strong>aprovado</strong>.</p>'
+            . '<p><strong>Valor do pedido:</strong> ' . formatarMoeda((float) $r["pedido_total"]) . '</p>'
+            . '<p>O estorno será processado para a forma de pagamento original.</p>'
+        );
+        self::enviarEmail($r["cliente_email"], $assunto, $corpo);
+    }
+
+    /**
+     * Notifica cliente que o reembolso foi recusado (com motivo).
+     */
+    public static function reembolsoRecusado(int $reembolsoId): void
+    {
+        $r = Reembolso::buscarPorId($reembolsoId);
+        if (!$r) {
+            return;
+        }
+
+        $motivo = !empty($r["motivo_recusa"]) ? nl2br(e($r["motivo_recusa"])) : "Não informado.";
+        $assunto = "Reembolso recusado — Pedido #{$r['pedido_id']} — EcoShop";
+        $corpo = self::templateHtml(
+            "Reembolso recusado",
+            '<p>Seu pedido de reembolso referente ao pedido <strong>#' . (int) $r["pedido_id"] . '</strong> não foi aprovado.</p>'
+            . '<p><strong>Motivo:</strong><br>' . $motivo . '</p>'
+            . '<p>Se achar que houve um engano, fale com nosso suporte (Tickets SAC).</p>'
+        );
+        self::enviarEmail($r["cliente_email"], $assunto, $corpo);
+    }
 }
