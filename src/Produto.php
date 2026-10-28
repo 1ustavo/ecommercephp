@@ -358,7 +358,14 @@ class Produto
         ]);
     }
 
-    public static function todosAdmin(int $page = 1, int $limit = 20): array
+    /**
+     * Lista produtos para o painel admin com filtros opcionais.
+     *
+     * $filtros:
+     *   - "status": "ativos" (padrão) | "inativos" | "todos"
+     *   - "id":     busca pelo ID exato do produto
+     */
+    public static function todosAdmin(int $page = 1, int $limit = 20, array $filtros = []): array
     {
         global $pdo;
 
@@ -366,24 +373,74 @@ class Produto
         $limit = max(1, min(100, $limit));
         $offset = ($page - 1) * $limit;
 
-        $stmt = $pdo->prepare("
+        $sql = "
             SELECT p.*, c.nome AS categoria_nome, m.nome AS marca_nome
             FROM produtos p
             LEFT JOIN categorias c ON c.id = p.categoria_id
             LEFT JOIN marcas m ON m.id = p.marca_id
-            ORDER BY p.created_at DESC
-            LIMIT ? OFFSET ?
-        ");
-        $stmt->execute([$limit, $offset]);
+        ";
+        $where = [];
+        $params = [];
+
+        // Filtro de status: ativos (padrão), inativos ou todos
+        $status = $filtros["status"] ?? "ativos";
+        if ($status === "ativos") {
+            $where[] = "p.ativo = TRUE";
+        } elseif ($status === "inativos") {
+            $where[] = "p.ativo = FALSE";
+        }
+
+        // Filtro por ID exato
+        if (!empty($filtros["id"]) && (int) $filtros["id"] > 0) {
+            $where[] = "p.id = ?";
+            $params[] = (int) $filtros["id"];
+        }
+
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
 
-    public static function contarTodosAdmin(): int
+    /**
+     * Conta produtos para o painel admin com os mesmos filtros de todosAdmin().
+     */
+    public static function contarTodosAdmin(array $filtros = []): int
     {
         global $pdo;
 
-        return (int) $pdo->query("SELECT COUNT(*) FROM produtos")->fetchColumn();
+        $sql = "SELECT COUNT(*) FROM produtos p";
+        $where = [];
+        $params = [];
+
+        $status = $filtros["status"] ?? "ativos";
+        if ($status === "ativos") {
+            $where[] = "p.ativo = TRUE";
+        } elseif ($status === "inativos") {
+            $where[] = "p.ativo = FALSE";
+        }
+
+        if (!empty($filtros["id"]) && (int) $filtros["id"] > 0) {
+            $where[] = "p.id = ?";
+            $params[] = (int) $filtros["id"];
+        }
+
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
     }
 
     /* ============================================================

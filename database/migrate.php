@@ -1,5 +1,12 @@
 <?php
 
+// Somente CLI: este script roda migrações e reseta a senha do usuário demo.
+// Nunca deve ser acessível via web (fica dentro de htdocs no XAMPP).
+if (PHP_SAPI !== "cli") {
+    http_response_code(403);
+    exit("Acesso permitido apenas via linha de comando.\n");
+}
+
 require_once __DIR__ . "/../config/bootstrap.php";
 
 $migrationsDir = __DIR__ . "/migrations";

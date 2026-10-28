@@ -281,6 +281,38 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: JSON.stringify({
+                    pedido_id: pedidoId,
+                    assunto: assunto,
+                    categoria: categoria,
+                    mensagem: mensagem,
+                }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.sucesso) {
+                    alert("Chamado aberto com sucesso! Redirecionando...");
+                    setTimeout(() => {
+                        window.location.href = "<?= pageUrl("ticket.php") ?>?id=" + data.ticket_id;
+                    }, 1000);
+                } else {
+                    alert(data.erro || "Erro ao abrir chamado.");
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            })
+            .catch(() => {
+                alert("Erro de conexão. Tente novamente.");
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        });
+    }
+});
+</script>
+
 <!-- Modal: solicitar reembolso (mesmo padrão do modal de ticket acima) -->
 <div id="modal-reembolso" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:8px; padding:24px; max-width:480px; width:90%;">
@@ -336,35 +368,4 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 })();
-</script>
-                    "X-CSRF-Token": csrfToken,
-                },
-                body: JSON.stringify({
-                    pedido_id: pedidoId,
-                    assunto: assunto,
-                    categoria: categoria,
-                    mensagem: mensagem,
-                }),
-            })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.sucesso) {
-                    alert("Chamado aberto com sucesso! Redirecionando...");
-                    setTimeout(() => {
-                        window.location.href = "<?= pageUrl("ticket.php") ?>?id=" + data.ticket_id;
-                    }, 1000);
-                } else {
-                    alert(data.erro || "Erro ao abrir chamado.");
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
-            })
-            .catch(() => {
-                alert("Erro de conexão. Tente novamente.");
-                btn.disabled = false;
-                btn.textContent = originalText;
-            });
-        });
-    }
-});
 </script>

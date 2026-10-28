@@ -92,10 +92,7 @@ class Reembolso
         $offset = ($page - 1) * $limit;
 
         $sql = "
-            SELECT r.*, p.total AS pedido_total, p.status AS pedido_status,
-                   u.nome AS cliente_nome, u.email AS cliente_email
-            FROM reembolsos r
-            JOIN pedidos p ON p.id = r.pedido_id
+            SELECT r.*, p.total AS pedido_total, p.status AS pedido_status, u.nome AS cliente_nome, u.email AS cliente_email FROM reembolsos r JOIN pedidos p ON p.id = r.pedido_id
             JOIN usuarios u ON u.id = r.usuario_id
         ";
         $params = [];

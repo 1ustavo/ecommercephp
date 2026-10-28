@@ -9,6 +9,31 @@ if (!temPapel("ADMIN", "GERENTE")) {
     exit;
 }
 
+// Busca por ID na listagem: em vez de filtrar a tabela, abre direto o
+// formulário de edição do produto encontrado (?id=N#form-produto).
+// Se o ID não existir, volta para a listagem com flash de erro.
+// (Precisa rodar ANTES do admin-header, que já emite saída HTML.)
+$buscaIdGet = isset($_GET["busca_id"]) ? (int) $_GET["busca_id"] : 0;
+if ($buscaIdGet > 0) {
+    $statusGet = $_GET["status"] ?? "";
+    if (!in_array($statusGet, ["ativos", "inativos", "todos"], true)) {
+        $statusGet = "ativos";
+    }
+
+    if (Produto::buscarPorId($buscaIdGet)) {
+        $urlBusca = pageUrl("admin/produtos.php") . "?id=" . $buscaIdGet;
+        if ($statusGet !== "ativos") {
+            $urlBusca .= "&status=" . urlencode($statusGet);
+        }
+        header("Location: " . $urlBusca . "#form-produto");
+        exit;
+    }
+
+    flash("produtos_busca_erro", "Nenhum produto encontrado com o ID #" . $buscaIdGet . ".");
+    header("Location: " . pageUrl("admin/produtos.php") . "?status=" . urlencode($statusGet));
+    exit;
+}
+
 $pageTitle = "Gestão de Produtos";
 $currentAdminPage = "produtos";
 $extraJs = "admin-produtos.js";
@@ -42,14 +67,39 @@ if ($produtoId > 0) {
     }
 }
 
+// Filtros da listagem — status (ativos por padrão) e busca por ID
+$statusFiltro = $_GET["status"] ?? "ativos";
+if (!in_array($statusFiltro, ["ativos", "inativos", "todos"], true)) {
+    $statusFiltro = "ativos";
+}
+$buscaId = isset($_GET["busca_id"]) ? (int) $_GET["busca_id"] : 0;
+$filtrosLista = ["status" => $statusFiltro];
+if ($buscaId > 0) {
+    $filtrosLista["id"] = $buscaId;
+}
+
+// Query string extra para paginação/links (preserva filtros e modo edição)
+// Obs.: busca_id agora redireciona para o modo edição no topo da página;
+// o tratamento abaixo é apenas fallback defensivo (não deve renderizar).
+$qsFiltros = "";
+if ($statusFiltro !== "ativos") {
+    $qsFiltros .= "&status=" . urlencode($statusFiltro);
+}
+if ($buscaId > 0) {
+    $qsFiltros .= "&busca_id=" . $buscaId;
+}
+if ($produtoId > 0) {
+    $qsFiltros .= "&id=" . $produtoId;
+}
+
 // Paginação — 10 produtos por página
 $limitePorPagina = 10;
 $paginaAtual = isset($_GET["pagina"]) ? max(1, (int) $_GET["pagina"]) : 1;
-$totalProdutos = Produto::contarTodosAdmin();
+$totalProdutos = Produto::contarTodosAdmin($filtrosLista);
 $totalPaginas = max(1, (int) ceil($totalProdutos / $limitePorPagina));
 $paginaAtual = min($paginaAtual, $totalPaginas);
 
-$produtos = Produto::todosAdmin($paginaAtual, $limitePorPagina);
+$produtos = Produto::todosAdmin($paginaAtual, $limitePorPagina, $filtrosLista);
 
 // Helper para preencher valores nos inputs em modo edição
 function valorCampo(?array $produto, string $campo): string
@@ -76,18 +126,45 @@ function valorCampo(?array $produto, string $campo): string
         </div>
     </div>
 
-    <?php if ($produtos): ?>
+    <?php if ($produtos || $buscaId > 0 || $statusFiltro !== "ativos"): ?>
         <!-- Listagem rápida de produtos existentes -->
         <div class="collapsible-section" style="margin-bottom: 24px;">
             <button type="button" class="collapsible-header">
-                <span>Produtos Cadastrados (<?= $totalProdutos ?>)</span>
+                <span>Produtos Cadastrados (<?= $totalProdutos ?><?= $statusFiltro !== "todos" ? " " . ($statusFiltro === "ativos" ? "ativos" : "inativos") : "" ?>)</span>
                 <span class="collapse-icon">▼</span>
             </button>
             <div class="collapsible-body">
+                <?php $erroBuscaId = flash("produtos_busca_erro"); ?>
+                <?php if ($erroBuscaId): ?>
+                    <div class="alert alert-error" style="margin-bottom:16px;"><?= e($erroBuscaId) ?></div>
+                <?php endif; ?>
+                <!-- Filtros: status e busca por ID -->
+                <form method="get" action="<?= pageUrl("admin/produtos.php") ?>" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+                    <?php if ($produtoEditando): ?>
+                        <input type="hidden" name="id" value="<?= (int) $produtoEditando["id"] ?>">
+                    <?php endif; ?>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="filtro-status">Status</label>
+                        <select id="filtro-status" name="status" class="form-control" onchange="this.form.submit()">
+                            <option value="ativos" <?= $statusFiltro === "ativos" ? "selected" : "" ?>>Ativos</option>
+                            <option value="inativos" <?= $statusFiltro === "inativos" ? "selected" : "" ?>>Inativos</option>
+                            <option value="todos" <?= $statusFiltro === "todos" ? "selected" : "" ?>>Todos</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="filtro-id">Buscar por ID</label>
+                        <input type="number" id="filtro-id" name="busca_id" min="1" class="form-control" placeholder="Ex.: 12" style="width:130px" value="<?= $buscaId > 0 ? $buscaId : "" ?>">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+                    <?php if ($buscaId > 0): ?>
+                        <a href="<?= pageUrl("admin/produtos.php") ?>?status=<?= e($statusFiltro) ?>" class="btn btn-gray btn-sm">Limpar busca</a>
+                    <?php endif; ?>
+                </form>
                 <div class="table-wrap">
                     <table>
                         <thead>
                             <tr>
+                                <th>ID</th>
                                 <th>Nome</th>
                                 <th>Categoria</th>
                                 <th>SKU</th>
@@ -98,8 +175,14 @@ function valorCampo(?array $produto, string $campo): string
                             </tr>
                         </thead>
                         <tbody>
+                            <?php if (!$produtos): ?>
+                                <tr>
+                                    <td colspan="8" style="text-align:center;padding:16px;color:var(--cinza-500)">Nenhum produto encontrado com os filtros selecionados.</td>
+                                </tr>
+                            <?php endif; ?>
                             <?php foreach ($produtos as $produto): ?>
                                 <tr>
+                                    <td><strong>#<?= (int) $produto["id"] ?></strong></td>
                                     <td><?= e($produto["nome"]) ?></td>
                                     <td><?= e($produto["categoria_nome"] ?? "—") ?></td>
                                     <td><?= e($produto["sku"] ?? "—") ?></td>
@@ -131,7 +214,7 @@ function valorCampo(?array $produto, string $campo): string
                     ?>
                     <div class="pagination-container">
                         <?php if ($paginaAtual > 1): ?>
-                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual - 1 ?>" class="btn btn-gray btn-sm">← Anterior</a>
+                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual - 1 ?><?= $qsFiltros ?>" class="btn btn-gray btn-sm">← Anterior</a>
                         <?php endif; ?>
 
                         <?php foreach ($paginas as $pagina): ?>
@@ -140,12 +223,12 @@ function valorCampo(?array $produto, string $campo): string
                             <?php elseif ($pagina === $paginaAtual): ?>
                                 <span class="btn btn-primary btn-sm" style="pointer-events:none"><?= $pagina ?></span>
                             <?php else: ?>
-                                <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $pagina ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
+                                <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $pagina ?><?= $qsFiltros ?>" class="btn btn-gray btn-sm"><?= $pagina ?></a>
                             <?php endif; ?>
                         <?php endforeach; ?>
 
                         <?php if ($paginaAtual < $totalPaginas): ?>
-                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual + 1 ?>" class="btn btn-gray btn-sm">Próxima →</a>
+                            <a href="<?= pageUrl("admin/produtos.php") ?>?pagina=<?= $paginaAtual + 1 ?><?= $qsFiltros ?>" class="btn btn-gray btn-sm">Próxima →</a>
                         <?php endif; ?>
                     </div>
                     <p class="pagination-info">
@@ -205,9 +288,6 @@ function valorCampo(?array $produto, string $campo): string
             <input type="hidden" id="produto-id" name="id" value="<?= (int) $produtoEditando["id"] ?>">
         <?php endif; ?>
 
-        <!-- ========================================================
-             ABA 1: CADASTRO/EDIÇÃO DE PRODUTO
-             ======================================================== -->
         <section class="tab-panel active" id="tab-basicos">
 
             <!-- Seção: Informações Básicas -->

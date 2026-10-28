@@ -1,4 +1,3 @@
-/**/docker-compose.yml
+﻿/**/docker-compose.yml
 .env
-.env.example
 docker-compose.override.yml
