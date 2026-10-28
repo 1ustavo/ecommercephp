@@ -1,0 +1,45 @@
+# ============================================================
+# SEGURANÇA — Proteções globais
+# ============================================================
+
+# Impedir listagem de diretórios
+Options -Indexes
+
+# Bloquear acesso a arquivos sensíveis
+<FilesMatch "^(\.env|composer\.(json|lock)|README\.md|\.gitignore)$">
+    Require all denied
+</FilesMatch>
+
+# Bloquear acesso ao diretório .git
+RedirectMatch 404 /\.git
+
+# Bloquear acesso ao diretório storage (logs, filas, etc.)
+RedirectMatch 404 /storage
+
+# Bloquear acesso ao diretório vendor (nunca deve ser acessível publicamente)
+RedirectMatch 404 /vendor
+
+# Bloquear acesso ao diretório database
+RedirectMatch 404 /database
+
+# Bloquear acesso ao diretório config
+RedirectMatch 404 /config
+
+# Bloquear acesso ao diretório src
+RedirectMatch 404 /src
+
+# ============================================================
+# HEADERS DE SEGURANÇA (fallback para servidores sem PHP)
+# ============================================================
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# ============================================================
+# PROTEÇÃO CONTRA UPLOADS MALICIOSOS
+# (Apenas no diretório de uploads — ver uploads/.htaccess)
+# ============================================================

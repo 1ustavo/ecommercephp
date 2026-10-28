@@ -4,6 +4,12 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require_once __DIR__ . "/../config/bootstrap.php";
 
+// Guard: apenas ADMIN pode cadastrar funcionários/gerentes/admins
+requererPapel(["ADMIN"]);
+
+// CSRF protection
+verify_csrf_from_request(true);
+
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);
 
@@ -73,6 +79,19 @@ if (!in_array($cargo, $cargosPermitidos, true)) {
     exit;
 }
 
+// Defesa em profundidade: nunca permitir criar conta com papel superior
+// ao de quem chama (anti auto-elevação, caso o guard mude no futuro).
+$cargoChamador = (string) ($_SESSION["cargo"] ?? "");
+if (papelNivel($cargo) > papelNivel($cargoChamador)) {
+    http_response_code(403);
+
+    echo json_encode([
+        "erro" => "Nao e possivel criar conta com papel superior ao do usuario autenticado."
+    ]);
+
+    exit;
+}
+
 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
 try {
@@ -83,6 +102,14 @@ try {
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$nome, $email, $passwordHash, $cargo]);
+
+    // Auditoria da criação de conta (antes não era registrada)
+    registrarAuditoria(
+        "CRIAR_USUARIO",
+        "USUARIO",
+        null,
+        "Conta {$cargo} criada por {$_SESSION['usuario_nome']}: {$nome} ({$email})"
+    );
 
     http_response_code(201);
 

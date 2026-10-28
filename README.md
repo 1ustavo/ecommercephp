@@ -250,7 +250,7 @@ O sistema carrega configurações do arquivo `.env` na raiz do projeto. As vari�
 | `DB_HOST` | Host do banco de dados | `localhost` |
 | `DB_NAME` | Nome do banco de dados | `ecommercephp` |
 | `DB_USER` | Usuário do banco | `postgres` |
-| `DB_PASS` | Senha do banco | `1040` |
+| `DB_PASS` | Senha do banco | _(obrigatória, definida no .env)_ |
 | `MAIL_ENABLED` | Habilita envio real de e-mails | `false` |
 | `MAIL_FROM` | Remetente dos e-mails | `no-reply@ecoshop.com.br` |
 | `STRIPE_SECRET_KEY` | Chave secreta do Stripe | vazio |

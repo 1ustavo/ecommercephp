@@ -7,9 +7,24 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+// CSRF protection — todas as ações do carrinho exigem token válido
+verify_csrf_from_request(true);
+
 $action = $_GET["action"] ?? $_POST["action"] ?? null;
 $isJson = str_contains($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") ||
     strtolower($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "xmlhttprequest";
+
+// Se há um usuário logado, aplica as mesmas regras rigorosas de sessão
+// (timeout de inatividade, fingerprint, IP, session_version). Convidados
+// (sem usuario_id) continuam usando o carrinho normalmente via sessão.
+if (isset($_SESSION["usuario_id"]) && !(new Auth())->validarSessao()) {
+    $_SESSION = []; // sessão expirada: limpa e segue como convidado
+    if ($isJson) {
+        respondJson(["success" => false, "message" => "Sessão expirada. Faça login novamente."], 401);
+    }
+    header("Location: " . pageUrl("login.php"));
+    exit;
+}
 
 function respondJson(array $data, int $status = 200): void
 {

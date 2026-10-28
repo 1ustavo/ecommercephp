@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-// Guard de admin para API: retorna JSON 401/403 (nao redirect)
-requererAdminApi();
+// Guard: apenas ADMIN/GERENTE acessam relatórios financeiros
+requererPapel(["ADMIN", "GERENTE"]);
 
 header("Content-Type: application/json; charset=utf-8");
 

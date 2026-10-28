@@ -2,6 +2,13 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
+// Página restrita a ADMIN/GERENTE — FUNCIONARIO é redirecionado
+// (a autorização real continua no requererPapel() das APIs)
+if (!temPapel("ADMIN", "GERENTE")) {
+    header("Location: " . pageUrl("admin/pedidos_pendentes.php"));
+    exit;
+}
+
 $pageTitle = "Cupons";
 $currentAdminPage = "cupons";
 require __DIR__ . "/../../includes/admin-header.php";
@@ -11,8 +18,12 @@ $cupons = Cupom::todosAdmin();
 
 <h1 class="page-title">Cupons de Desconto</h1>
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div style="margin-bottom:16px">
-    <button type="button" class="btn btn-primary" id="btn-novo-cupom">Novo Cupom</button>
+    <?php if ($podeGerenciar): ?>
+        <button type="button" class="btn btn-primary" id="btn-novo-cupom">Novo Cupom</button>
+    <?php endif; ?>
 </div>
 
 <div class="card-grid" style="grid-template-columns: 1fr; gap:16px;">
@@ -36,8 +47,10 @@ $cupons = Cupom::todosAdmin();
                         </p>
                     </div>
                     <div class="flex gap-8">
-                        <button type="button" class="btn btn-sm btn-outline btn-editar" data-id="<?= (int) $cupom["id"] ?>">Editar</button>
-                        <button type="button" class="btn btn-sm btn-outline btn-excluir" data-id="<?= (int) $cupom["id"] ?>" style="border-color:var(--vermelho);color:var(--vermelho)">Excluir</button>
+                        <?php if ($podeGerenciar): ?>
+                            <button type="button" class="btn btn-sm btn-outline btn-editar" data-id="<?= (int) $cupom["id"] ?>">Editar</button>
+                            <button type="button" class="btn btn-sm btn-outline btn-excluir" data-id="<?= (int) $cupom["id"] ?>" style="border-color:var(--vermelho);color:var(--vermelho)">Excluir</button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

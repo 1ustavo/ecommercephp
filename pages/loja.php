@@ -2,8 +2,16 @@
 
 require_once __DIR__ . "/../config/bootstrap.php";
 
+// Reset de filtros
+if (isset($_GET["reset"])) {
+    session_destroy();
+    header("Location: " . pageUrl("loja.php"));
+    exit;
+}
+
 $filtros = [
     "categoria" => $_GET["categoria"] ?? "",
+    "marca" => $_GET["marca"] ?? "",
     "busca" => trim($_GET["busca"] ?? ""),
     "preco_min" => $_GET["preco_min"] ?? "",
     "preco_max" => $_GET["preco_max"] ?? "",
@@ -19,6 +27,7 @@ $filtros["pagina"] = min($filtros["pagina"], $totalPaginas);
 
 $produtos = Produto::listar($filtros);
 $categorias = Produto::categorias();
+$marcas = Produto::marcas();
 $pageTitle = "Loja";
 
 require __DIR__ . "/../includes/header.php";
@@ -39,6 +48,17 @@ require __DIR__ . "/../includes/header.php";
             <?php foreach ($categorias as $cat): ?>
                 <option value="<?= e($cat["slug"]) ?>" <?= $filtros["categoria"] === $cat["slug"] ? "selected" : "" ?>>
                     <?= e($cat["nome"]) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Marca</label>
+        <select name="marca" class="form-control">
+            <option value="">Todas</option>
+            <?php foreach ($marcas as $marca): ?>
+                <option value="<?= e($marca["slug"]) ?>" <?= $filtros["marca"] === $marca["slug"] ? "selected" : "" ?>>
+                    <?= e($marca["nome"]) ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -65,18 +85,27 @@ require __DIR__ . "/../includes/header.php";
 
 <?php if (empty($produtos)): ?>
     <div class="empty-state">
-        <h3>Nenhum produto encontrado</h3>
-        <p>Tente ajustar os filtros de busca.</p>
+        <h3>Nenhum produto encontrado para estes filtros</h3>
+        <p>Tente ajustar os filtros de busca ou <a href="<?= pageUrl("loja.php") ?>?reset=1" class="btn btn-gray btn-sm">limpar filtros</a>.</p>
     </div>
 <?php else: ?>
     <div class="card-grid">
         <?php foreach ($produtos as $p): ?>
             <a href="<?= pageUrl("produto.php?slug=" . urlencode($p["slug"])) ?>" class="product-card">
-                <div class="product-img" style="background:<?= corPlaceholder($p["slug"]) ?>">
-                
+                <div class="product-img">
+                    <?php if (!empty($p["imagem"]) && !str_starts_with($p["imagem"], 'placeholder:')): ?>
+                        <img src="<?= baseUrl() . '/' . $p["imagem"] ?>" alt="<?= e($p["nome"]) ?>">
+                    <?php else: ?>
+                        <div style="background:<?= corPlaceholder($p["slug"]) ?>;width:100%;height:100%"></div>
+                    <?php endif; ?>
                 </div>
                 <div class="product-body">
-                    <div class="product-category"><?= e($p["categoria_nome"]) ?></div>
+                    <div class="product-category">
+                        <?= e($p["categoria_nome"]) ?>
+                        <?php if (!empty($p["marca_nome"])): ?>
+                            • <?= e($p["marca_nome"]) ?>
+                        <?php endif; ?>
+                    </div>
                     <div class="product-name"><?= e($p["nome"]) ?></div>
                     <div class="product-price"><?= formatarMoeda((float) $p["preco"]) ?></div>
                 </div>
@@ -121,3 +150,59 @@ require __DIR__ . "/../includes/header.php";
 <?php endif; ?>
 
 <?php require __DIR__ . "/../includes/footer.php"; ?>
+
+<script>
+function updateFilterBadge(input, filterType) {
+    const value = input.value.trim();
+    const containerId = 'filtros-' + filterType + '-ativos';
+    const container = document.getElementById(containerId);
+    
+    if (!container) return;
+    
+    // Remove existing badges for this filter type
+    container.innerHTML = '';
+    
+    if (!value) return;
+    
+    // Create badge
+    const badge = document.createElement('span');
+    badge.className = 'badge-filter';
+    badge.innerHTML = value + ' <span class="badge-filter-close" onclick="removerFiltro(\'' + filterType + '\')">×</span>';
+    container.appendChild(badge);
+}
+
+function removerFiltro(filterType) {
+    // Remove the visual badge and reset the input
+    const container = document.getElementById('filtros-' + filterType + '-ativos');
+    if (container) {
+        container.innerHTML = '';
+    }
+    // Note: Remover filtro de verdade requer submit do formulário com valor vazio
+    // ou atualização via AJAX. Aqui apenas removemos o visual.
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar badges a partir dos valores atuais
+    const filtros = {
+        'busca': '<?= e($filtros["busca"]) ?>',
+        'categoria': '<?= e($filtros["categoria"]) ?>',
+        'preco_min': '<?= e($filtros["preco_min"]) ?>',
+        'preco_max': '<?= e($filtros["preco_max"]) ?>'
+    };
+    
+    for (const [tipo, valor] of Object.entries(filtros)) {
+        if (valor) {
+            const containerId = 'filtros-' + tipo + '-ativos';
+            const container = document.getElementById(containerId);
+            if (container) {
+                const badge = document.createElement('span');
+                badge.className = 'badge-filter';
+                badge.innerHTML = valor + ' <span class="badge-filter-close" onclick="removerFiltro(\'' + tipo + '\')">×</span>';
+                container.appendChild(badge);
+            }
+        }
+    }
+});
+</script>
+</parameter>
+</replace_in_file>

@@ -1,5 +1,5 @@
 <?php
-//erro
+
 class GatewayPagamento
 {
     private static ?string $stripeSecret = null;
@@ -64,13 +64,25 @@ class GatewayPagamento
                 "payment_method_types" => ["card"],
                 "line_items" => $lineItems,
                 "mode" => "payment",
-                "success_url" => "https://seusite.com/checkout/sucesso?session_id={CHECKOUT_SESSION_ID}",
-                "cancel_url" => "https://seusite.com/checkout/cancelado",
+                "success_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout_sucesso.php?session_id={CHECKOUT_SESSION_ID}",
+                "cancel_url" => ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: '') . "/pages/checkout.php?cancel=1",
                 "metadata" => [
                     "pedido_id" => $pedido["id"],
                     "usuario_id" => $pedido["usuario_id"],
                 ],
             ]);
+
+            // Persiste registro de pagamento localmente para auditoria
+            try {
+                global $pdo;
+                $stmt = $pdo->prepare("INSERT INTO payments (pedido_id, gateway, stripe_session_id, stripe_payment_intent_id, amount_cents, currency, status, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, NOW())");
+                $amount = isset($session->amount_total) ? (int) $session->amount_total : null;
+                $currency = isset($session->currency) ? $session->currency : 'brl';
+                $metadata = json_encode($session->metadata ?? []);
+                $stmt->execute([$pedido['id'], 'stripe', $session->id ?? null, $session->payment_intent ?? null, $amount, $currency, $session->payment_status ?? null, $metadata]);
+            } catch (Exception $e) {
+                error_log('Erro ao registrar payment local: ' . $e->getMessage());
+            }
 
             return $session->url;
         } catch (Exception $e) {
@@ -141,7 +153,37 @@ class GatewayPagamento
         curl_close($ch);
 
         if ($httpCode !== 201) {
-            error_log("Mercado Pago error: " . $response);
+            // Redige campos sensíveis antes de logar (tokens, dados de cartão, etc.)
+            // A resposta do MP pode conter payment_methods, card tokens, dados do
+            // comprador — apenas logamos status HTTP e corpo sem campos sensíveis.
+            $resumoSeguro = "";
+            $respostaDecodificada = json_decode($response, true);
+            if (is_array($respostaDecodificada)) {
+                // Lista negra de chaves sensíveis — nunca logadas
+                $chavesSensiveis = [
+                    "card_token", "card_number", "last_four_digits", "security_code",
+                    "cvv", "token", "access_token", "authorization", "init_point",
+                    "sandbox_init_point", "client_secret", "payer_email",
+                ];
+                foreach ($respostaDecodificada as $chave => $valor) {
+                    if (in_array(strtolower($chave), $chavesSensiveis, true)) {
+                        $respostaDecodificada[$chave] = "*** REDACTED ***";
+                    } elseif (is_array($valor)) {
+                        // Recursivo para objetos aninhados (card, payer, metadata)
+                        foreach ($valor as $subChave => $subValor) {
+                            if (in_array(strtolower($subChave), $chavesSensiveis, true)) {
+                                $respostaDecodificada[$chave][$subChave] = "*** REDACTED ***";
+                            }
+                        }
+                    }
+                }
+                $resumoLimpo = json_encode($respostaDecodificada, JSON_UNESCAPED_UNICODE);
+                $resumoLimpo = mb_substr($resumoLimpo, 0, 2000); // limita tamanho
+                $respostaSegura = "HTTP {$httpCode} | " . $resumoLimpo;
+            } else {
+                $respostaSegura = "HTTP {$httpCode} | resposta não-JSON (truncada): " . mb_substr((string) $response, 0, 100);
+            }
+            error_log("Mercado Pago error: " . $respostaSegura);
             return null;
         }
 
@@ -178,17 +220,21 @@ class GatewayPagamento
     /**
      * Processa webhook de confirmação de pagamento.
      */
-    public static function processarWebhook(string $gateway, array $payload): bool
+    /**
+     * Processa webhook de confirmação de pagamento.
+     * Agora espera o payload bruto (JSON string) para validar a assinatura corretamente.
+     */
+    public static function processarWebhook(string $gateway, string $rawPayload, string $sigHeader = ""): bool
     {
         self::init();
 
         if ($gateway === "stripe") {
-            $sigHeader = $_SERVER["HTTP_STRIPE_SIGNATURE"] ?? "";
             try {
+                $webhookSecret = $_ENV["STRIPE_WEBHOOK_SECRET"] ?? getenv("STRIPE_WEBHOOK_SECRET") ?: "";
                 $event = \Stripe\Webhook::constructEvent(
-                    json_encode($payload),
+                    $rawPayload,
                     $sigHeader,
-                    $_ENV["STRIPE_WEBHOOK_SECRET"] ?? ""
+                    $webhookSecret
                 );
 
                 if ($event->type === "checkout.session.completed") {
@@ -196,18 +242,24 @@ class GatewayPagamento
                     $pedidoId = (int) ($session->metadata->pedido_id ?? 0);
                     if ($pedidoId) {
                         Pedido::confirmarPagamento($pedidoId);
+                        try { Notificacao::pedidoPago($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar pagamento: ' . $e->getMessage()); }
                         return true;
                     }
                 }
+
+                // Tratar outros eventos relevantes conforme necessário
             } catch (Exception $e) {
                 error_log("Stripe webhook error: " . $e->getMessage());
             }
         }
 
+        // Mantém compatibilidade com Mercado Pago (espera array decodificado em JSON)
         if ($gateway === "mercadopago") {
+            $payload = json_decode($rawPayload, true);
             $pedidoId = (int) ($payload["metadata"]["pedido_id"] ?? 0);
             if ($pedidoId && ($payload["status"] ?? "") === "approved") {
                 Pedido::confirmarPagamento($pedidoId);
+                try { Notificacao::pedidoPago($pedidoId); } catch (Throwable $e) { error_log('Erro ao notificar pagamento MP: ' . $e->getMessage()); }
                 return true;
             }
         }
@@ -215,4 +267,3 @@ class GatewayPagamento
         return false;
     }
 }
-//</arg_value></tool_call>

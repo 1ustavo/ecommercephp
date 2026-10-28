@@ -1,14 +1,10 @@
-/* ============================================================
-   ADMIN-CATEGORIAS.JS
-   CRUD de categorias via modal + API.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal-categoria");
     const form = document.getElementById("form-categoria");
     const modalTitulo = document.getElementById("modal-titulo");
     const btnNova = document.getElementById("btn-nova-categoria");
     const btnCancelar = document.getElementById("btn-cancelar");
+    const csrfToken = document.getElementById("csrf-token")?.value || "";
 
     function caminhoApi(arquivo) {
         return "../../api/admin/" + arquivo;
@@ -24,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("cat-id").value = "";
     }
 
-    btnNova.addEventListener("click", function () {
+    btnNova?.addEventListener("click", function () {
         modalTitulo.textContent = "Nova Categoria";
         abrirModal();
     });
@@ -63,6 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
         formData.append("pai_id", paiId || "");
         formData.append("ativo", ativo ? "1" : "0");
         if (id) formData.append("id", id);
+        if (csrfToken) formData.append("csrf_token", csrfToken);
 
         fetch(caminhoApi("salvar_categoria.php"), {
             method: "POST",
@@ -88,8 +85,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const id = this.getAttribute("data-id");
             fetch(caminhoApi("salvar_categoria.php"), {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "id=" + encodeURIComponent(id),
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: "id=" + encodeURIComponent(id) + "&csrf_token=" + encodeURIComponent(csrfToken),
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const formData = new FormData();
             formData.append("id", id);
+            if (csrfToken) formData.append("csrf_token", csrfToken);
 
             fetch(caminhoApi("excluir_categoria.php"), {
                 method: "POST",

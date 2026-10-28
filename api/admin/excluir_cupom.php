@@ -2,7 +2,11 @@
 
 require_once __DIR__ . "/../../config/bootstrap.php";
 
-requererAdminApi();
+// Guard: apenas ADMIN/GERENTE gerenciam cupons
+requererPapel(["ADMIN", "GERENTE"]);
+
+// CSRF protection
+verify_csrf_from_request(true);
 
 header("Content-Type: application/json; charset=utf-8");
 
@@ -20,7 +24,6 @@ if ($id <= 0) {
     exit;
 }
 
-$cupom = Cupom::buscarPorCodigo("");
 // Busca diretamente para pegar o código
 $stmt = $pdo->prepare("SELECT * FROM cupons WHERE id = ?");
 $stmt->execute([$id]);

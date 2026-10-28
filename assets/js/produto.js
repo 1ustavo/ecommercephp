@@ -1,119 +1,197 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("form-add-cart");
-    const variationButtons = document.querySelectorAll(".variation-btn");
-    const variacaoInput = document.getElementById("variacao_id");
-    const priceDisplay = document.getElementById("preco-display");
+document.addEventListener("DOMContentLoaded", function () {
+    const mainImage = document.getElementById("main-product-image");
+    const thumbs = document.querySelectorAll(".product-gallery-thumb");
+    const mainImageContainer = document.getElementById("main-image-container");
+    const prevBtn = document.getElementById("gallery-prev");
+    const nextBtn = document.getElementById("gallery-next");
+
+    // Carrossel de imagens
+    if (mainImage && thumbs.length > 0) {
+        let currentIndex = 0;
+
+        function mostrarImagem(index) {
+            const total = thumbs.length;
+            currentIndex = (index + total) % total;
+
+            const thumb = thumbs[currentIndex];
+            mainImage.src = thumb.dataset.src;
+
+            thumbs.forEach((t) => t.classList.remove("active"));
+            thumb.classList.add("active");
+            mainImage.dataset.currentIndex = currentIndex;
+        }
+
+        // Clique nas miniaturas
+        thumbs.forEach((thumb) => {
+            thumb.addEventListener("click", function () {
+                mostrarImagem(parseInt(this.dataset.index));
+            });
+        });
+
+        // Botões prev/next
+        if (prevBtn) {
+            prevBtn.addEventListener("click", () => mostrarImagem(currentIndex - 1));
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener("click", () => mostrarImagem(currentIndex + 1));
+        }
+
+        // Navegação por teclado
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowLeft") mostrarImagem(currentIndex - 1);
+            if (e.key === "ArrowRight") mostrarImagem(currentIndex + 1);
+        });
+
+        // Define índice inicial
+        mainImage.dataset.currentIndex = 0;
+    }
+
+    // Formulário de adicionar ao carrinho
+    const formAddCart = document.getElementById("form-add-cart");
+    if (formAddCart) {
+        formAddCart.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Adicionando...";
+
+            const formData = new FormData(this);
+
+            fetch(this.action, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    mostrarMensagem("Produto adicionado ao carrinho com sucesso!", "success");
+                    btn.textContent = "Adicionado!";
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    mostrarMensagem(data.message || "Erro ao adicionar produto", "error");
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(() => {
+                mostrarMensagem("Erro de conexão. Tente novamente.", "error");
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        });
+    }
+
+    function mostrarMensagem(mensagem, tipo = "success") {
+        // Remove mensagens existentes
+        document.querySelectorAll(".alert").forEach((a) => a.remove());
+
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${tipo}`;
+        alert.textContent = mensagem;
+        alert.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 14px 20px;
+            background: ${tipo === "success" ? "#d1fae5" : "#fee2e2"};
+            color: ${tipo === "success" ? "#065f46" : "#991b1b"};
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        `;
+
+        document.body.appendChild(alert);
+
+        setTimeout(() => {
+            alert.style.animation = "slideOut 0.3s ease";
+            setTimeout(() => alert.remove(), 300);
+        }, 3000);
+    }
+
+    // Variações de produto
+    const variacaoBotoes = document.querySelectorAll(".variation-btn");
+    const variacaoIdInput = document.getElementById("variacao_id");
+    const precoDisplay = document.getElementById("preco-display");
     const estoqueDisplay = document.getElementById("estoque-display");
-    const qtyInput = form?.querySelector('input[name="quantidade"]');
+    const precoBase = parseFloat(document.querySelector('[data-produto-id]')?.dataset.preco || 0);
 
-    if (!form) {
-        return;
-    }
+    variacaoBotoes.forEach((btn) => {
+        btn.addEventListener("click", function () {
+            // Atualiza classe selected
+            variacaoBotoes.forEach((b) => b.classList.remove("selected"));
+            this.classList.add("selected");
 
-    const basePriceText = priceDisplay?.textContent ?? "0";
-    const basePrice = parseFloat(basePriceText.replace(/[R$\s\.]/g, "").replace(",", ".")) || 0;
-
-    // Estoque atual (produto base ou variação selecionada)
-    let estoqueAtual = parseInt(form.dataset.estoque || "0", 10);
-
-    // Atualiza o campo de quantidade com o max e valida o valor atual
-    function atualizarLimiteEstoque(estoque) {
-        estoqueAtual = Math.max(0, estoque);
-
-        if (qtyInput) {
-            qtyInput.max = String(estoqueAtual);
-            qtyInput.dataset.estoque = String(estoqueAtual);
-
-            // Se o valor atual exceder o novo limite, ajusta para o máximo
-            const valorAtual = parseInt(qtyInput.value || "1", 10);
-            if (valorAtual > estoqueAtual) {
-                qtyInput.value = String(Math.max(1, estoqueAtual));
-            }
-        }
-
-        if (estoqueDisplay) {
-            estoqueDisplay.textContent = String(estoqueAtual);
-        }
-    }
-
-    // Impede digitar valores acima do estoque
-    if (qtyInput) {
-        qtyInput.addEventListener("input", () => {
-            let valor = parseInt(qtyInput.value || "0", 10);
-            if (isNaN(valor) || valor < 1) {
-                qtyInput.value = "1";
-                return;
-            }
-            if (valor > estoqueAtual) {
-                qtyInput.value = String(estoqueAtual);
-                showMessage(`Estoque máximo disponível: ${estoqueAtual} un.`, "error");
-            }
-        });
-
-        // Impede incrementar acima do estoque via setas do navegador
-        qtyInput.addEventListener("change", () => {
-            let valor = parseInt(qtyInput.value || "1", 10);
-            if (isNaN(valor) || valor < 1) {
-                qtyInput.value = "1";
-            } else if (valor > estoqueAtual) {
-                qtyInput.value = String(estoqueAtual);
-                showMessage(`Estoque máximo disponível: ${estoqueAtual} un.`, "error");
-            }
-        });
-    }
-
-    // Valida no submit antes de enviar
-    form.addEventListener("submit", (e) => {
-        const valor = parseInt(qtyInput?.value || "1", 10);
-        if (isNaN(valor) || valor < 1) {
-            e.preventDefault();
-            showMessage("Quantidade inválida.", "error");
-            return;
-        }
-        if (valor > estoqueAtual) {
-            e.preventDefault();
-            showMessage(`Estoque máximo disponível: ${estoqueAtual} un.`, "error");
-            return;
-        }
-    });
-
-    // Feedback visual de erro
-    function showMessage(message, type = "error") {
-        const msgEl = document.getElementById("add-msg");
-        if (!msgEl) return;
-        msgEl.innerHTML = "";
-        const div = document.createElement("div");
-        div.className = `alert alert-${type === "error" ? "error" : "success"}`;
-        div.textContent = message;
-        msgEl.appendChild(div);
-        setTimeout(() => div.remove(), 3000);
-    }
-
-    variationButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            variationButtons.forEach((item) => item.classList.remove("selected"));
-            button.classList.add("selected");
-
-            const variationId = button.dataset.id || "";
-            const extra = parseFloat(button.dataset.precoAd || "0") || 0;
-            const stock = parseInt(button.dataset.estoque || "0", 10);
-
-            if (variacaoInput) {
-                variacaoInput.value = variationId;
+            // Atualiza input hidden
+            const variacaoId = this.dataset.id;
+            if (variacaoIdInput) {
+                variacaoIdInput.value = variacaoId;
             }
 
-            if (priceDisplay) {
-                priceDisplay.textContent = new Intl.NumberFormat("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                }).format(basePrice + extra);
+            // Atualiza preço e estoque
+            const precoAdicional = parseFloat(this.dataset.precoAd || 0);
+            const estoque = parseInt(this.dataset.estoque || 0);
+
+            if (precoDisplay) {
+                const novoPreco = precoBase + precoAdicional;
+                precoDisplay.textContent = formatarMoeda(novoPreco);
             }
 
-            // Atualiza o limite de estoque para a variação selecionada
-            atualizarLimiteEstoque(stock);
+            if (estoqueDisplay) {
+                estoqueDisplay.textContent = estoque;
+            }
+
+            // Atualiza o max do input de quantidade conforme o estoque da variação
+            const qtdInput = document.querySelector('input[name="quantidade"]');
+            if (qtdInput) {
+                qtdInput.max = estoque;
+                qtdInput.dataset.estoque = estoque;
+                if (parseInt(qtdInput.value) > estoque) {
+                    qtdInput.value = estoque > 0 ? estoque : 1;
+                }
+            }
         });
     });
 
-    // Inicializa o limite com o estoque do produto base
-    atualizarLimiteEstoque(parseInt(form.dataset.estoque || "0", 10));
+    function formatarMoeda(valor) {
+        return "R$ " + valor.toFixed(2).replace(".", ",");
+    }
 });
+
+// Adiciona animações CSS
+const style = document.createElement("style");
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);

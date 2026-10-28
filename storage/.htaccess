@@ -1,0 +1,5 @@
+# Nenhum conteúdo de storage deve ser acessível pela web.
+# Esta pasta contém logs de e-mail, fila de jobs e cache de tokens.
+# XAMPP serve tudo dentro de htdocs — este .htaccess bloqueia o acesso direto.
+Require all denied
+Options -Indexes

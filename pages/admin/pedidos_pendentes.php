@@ -41,6 +41,8 @@ $stats = Pedido::estatisticas();
     </div>
 </div>
 
+<input type="hidden" id="csrf-token" value="<?= e(csrf_token()) ?>">
+
 <div id="lista-pendentes">
     <?php if (empty($pendentes)): ?>
         <div class="empty-state">
@@ -110,16 +112,18 @@ $stats = Pedido::estatisticas();
                     <?php endif; ?>
 
                     <div class="flex gap-10 mt-18 flex-wrap">
-                        <button type="button"
-                                class="btn btn-primary btn-aprovar"
-                                data-pedido-id="<?= (int) $pedido["id"] ?>">
-                            Aceitar pedido
-                        </button>
-                        <button type="button"
-                                class="btn btn-outline btn-recusar"
-                                data-pedido-id="<?= (int) $pedido["id"] ?>">
-                            Recusar pedido
-                        </button>
+                        <?php if ($podeAprovarPedido): ?>
+                            <button type="button"
+                                    class="btn btn-primary btn-aprovar"
+                                    data-pedido-id="<?= (int) $pedido["id"] ?>">
+                                Aceitar pedido
+                            </button>
+                            <button type="button"
+                                    class="btn btn-outline btn-recusar"
+                                    data-pedido-id="<?= (int) $pedido["id"] ?>">
+                                Recusar pedido
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

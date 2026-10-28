@@ -1,9 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     const apiEndpoint = "../api/carrinho.php";
+    const csrfToken = document.getElementById("csrf-token-cart")?.value || "";
 
-    // ============================================================
-    // Toast / feedback visual
-    // ============================================================
     function showToast(message, type = "error") {
         const existing = document.querySelector(".toast");
         if (existing) existing.remove();
@@ -41,17 +39,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ============================================================
     // API helpers
-    // ============================================================
     async function request(action, body) {
+        const payload = { ...body, csrf_token: csrfToken };
         const response = await fetch(`${apiEndpoint}?action=${encodeURIComponent(action)}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "X-CSRF-Token": csrfToken,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(payload),
         });
 
         // Retorna o JSON mesmo em respostas de erro (ex: 400) para que
@@ -74,9 +72,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 setButtonLoading(button, false);
                 return;
             }
-            window.location.reload();
+            // Atualização otimista: atualizar a UI imediatamente
+            const item = document.getElementById(`cart-item-${itemId}`);
+            if (item) {
+                const qtyInput = item.querySelector('.qty-value');
+                if (qtyInput) qtyInput.textContent = data.nova_quantidade;
+                const subtotalEl = item.querySelector('.flex-none');
+                if (subtotalEl) subtotalEl.textContent = formatarMoeda(data.subtotal_novo);
+            }
+            showToast("Item atualizado!", "success");
+            // Recarregar depois de um curto delay para sincronizar com servidor
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             showToast(error.message);
+        } finally {
             setButtonLoading(button, false);
         }
     }
@@ -92,10 +101,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 setButtonLoading(button, false);
                 return;
             }
-            window.location.reload();
+            // Remover item da UI com animação
+            const cartItem = document.getElementById(`cart-item-${itemId}`);
+            if (cartItem) {
+                cartItem.style.transition = "opacity 0.3s, transform 0.3s";
+                cartItem.style.opacity = "0";
+                cartItem.style.transform = "translateY(10px)";
+                setTimeout(() => {
+                    cartItem.remove();
+                    atualizarTotalComDesconto();
+                }, 300);
+            } else {
+                atualizarTotalComDesconto();
+            }
         } catch (error) {
             showToast(error.message);
-            setItemRemoving(item, false);
+            // Reverter estado visual se falhou
+            const cartItem = document.getElementById(`cart-item-${itemId}`);
+            if (cartItem) {
+                cartItem.style.transition = "opacity 0.3s, transform 0.3s";
+                cartItem.style.opacity = "1";
+                cartItem.style.transform = "translateY(0)";
+            }
+        } finally {
             setButtonLoading(button, false);
         }
     }
@@ -137,9 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ============================================================
-    // CUPOM DE DESCONTO NO CARRINHO
-    // ============================================================
     const cupomInput = document.getElementById("cupom-input-cart");
     const btnAplicar = document.getElementById("btn-aplicar-cupom-cart");
     const cupomFeedback = document.getElementById("cupom-feedback-cart");
@@ -196,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     descontoAplicado = Number(data.desconto);
                     cupomFeedback.innerHTML = '<span style="color:var(--sucesso-text);font-weight:600">' +
                         data.mensagem + " Desconto: " + data.desconto_formatado + "</span>";
-                    cupomInput.disabled = true;
+                    cupomInput.value = codigo;
                     btnAplicar.textContent = "Aplicado ✓";
                     btnAplicar.classList.add("btn-gray");
                     btnAplicar.classList.remove("btn-outline");
@@ -244,6 +269,36 @@ document.addEventListener("DOMContentLoaded", () => {
                     aplicarCupom();
                 }
             }, 600);
+        });
+    }
+
+    // Event listener para remover cupom
+    const btnRemoverCupom = document.getElementById("btn-remover-cupom-cart");
+    if (btnRemoverCupom) {
+        btnRemoverCupom.addEventListener("click", function() {
+            if (!cupomInput || !cupomFeedback) return;
+
+            // Envia requisicao para remover o cupom da sessao
+            request("remover_cupom", {})
+                .then((data) => {
+                    if (data.success) {
+                        descontoAplicado = 0;
+                        cupomInput.value = "";
+                        cupomInput.disabled = false;
+                        cupomFeedback.innerHTML = '';
+                        cupomInput.disabled = false;
+                        btnAplicar.textContent = "Aplicar";
+                        btnAplicar.classList.remove("btn-gray");
+                        btnAplicar.classList.add("btn-outline");
+                        atualizarTotalComDesconto();
+                        showToast("Cupom removido!", "success");
+                    } else {
+                        showToast(data.message || "Não foi possível remover o cupom.", "error");
+                    }
+                })
+                .catch((error) => {
+                    showToast(error.message, "error");
+                });
         });
     }
 });

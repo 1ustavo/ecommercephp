@@ -16,6 +16,8 @@ require __DIR__ . "/../includes/header.php";
 
 <h1 class="page-title">Carrinho</h1>
 
+<input type="hidden" id="csrf-token-cart" value="<?= e(csrf_token()) ?>">
+
 <?php if (isset($_GET["sucesso"])): ?>
     <div class="alert alert-success">Item atualizado no carrinho.</div>
 <?php elseif (isset($_GET["erro"])): ?>
@@ -31,7 +33,9 @@ require __DIR__ . "/../includes/header.php";
 <?php else: ?>
     <div id="cart-items">
         <?php foreach ($itens as $item): ?>
-            <div class="cart-item" data-item-id="<?= (int) $item["id"] ?>" data-estoque="<?= (int) $item["estoque_disponivel"] ?>">
+<div class="cart-item" id="cart-item-<?= (int) $item["id"] ?>" data-item-id="<?= (int) $item["id"] ?>" data-estoque="<?= (int) $item["estoque_disponivel"] ?>">
+</parameter>
+</replace_in_file>
                 <div class="cart-item-img" style="background:<?= corPlaceholder($item["slug"]) ?>"></div>
                 <div class="flex-1">
                     <strong><?= e($item["nome"]) ?></strong>
@@ -68,16 +72,22 @@ require __DIR__ . "/../includes/header.php";
         </div>
 
         <!-- === CUPOM DE DESCONTO === -->
-        <div class="cart-summary-cupom">
+<div class="cart-summary-cupom">
             <label class="form-label" for="cupom-input-cart" style="font-size:0.85rem;color:var(--cinza-600)">
                 Cupom de desconto
             </label>
             <div class="flex gap-8">
                 <input type="text" id="cupom-input-cart" class="form-control" placeholder="Digite seu cupom" style="text-transform:uppercase;font-size:0.85rem"
-                       value="<?= e($cupomSessao["codigo"] ?? "") ?>" <?= $cupomSessao ? "disabled" : "" ?>>
-                <button type="button" class="btn <?= $cupomSessao ? "btn-gray" : "btn-outline" ?> btn-sm" id="btn-aplicar-cupom-cart" style="white-space:nowrap">
-                    <?= $cupomSessao ? "Aplicado ✓" : "Aplicar" ?>
-                </button>
+                       value="<?= e($cupomSessao["codigo"] ?? "") ?>" <?= $cupomSessao ? "readOnly" : "" ?>>
+                <?php if ($cupomSessao): ?>
+                    <button type="button" class="btn btn-sm btn-outline" id="btn-remover-cupom-cart" style="white-space:nowrap">
+                        Remover cupom
+                    </button>
+                <?php else: ?>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-aplicar-cupom-cart" style="white-space:nowrap">
+                        Aplicar
+                    </button>
+                <?php endif; ?>
             </div>
             <div id="cupom-feedback-cart" style="margin-top:6px;font-size:0.8rem;min-height:1.2em">
                 <?php if ($cupomSessao): ?>
@@ -85,6 +95,8 @@ require __DIR__ . "/../includes/header.php";
                 <?php endif; ?>
             </div>
         </div>
+</parameter>
+</replace_in_file>
 
         <div class="cart-summary-row" id="desconto-row-cart" style="<?= $cupomSessao ? "display:flex" : "display:none" ?>">
             <span>Desconto</span>

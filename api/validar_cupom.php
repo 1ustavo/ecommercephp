@@ -9,8 +9,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header("Content-Type: application/json; charset=utf-8");
 
-// Verifica login de forma segura — retorna JSON em vez de redirect
-if (!isset($_SESSION["usuario_id"])) {
+// Verifica login + sessão rigorosa (timeout, fingerprint, IP, session_version)
+if (!(new Auth())->validarSessao()) {
+    $_SESSION = []; // sessão inválida/expirada: limpa dados autenticados
     http_response_code(401);
     echo json_encode(["sucesso" => false, "erro" => "Sessão expirada. Faça login novamente."]);
     exit;
@@ -21,6 +22,9 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["sucesso" => false, "erro" => "Método não permitido."]);
     exit;
 }
+
+// CSRF protection
+verify_csrf_from_request(true);
 
 $codigo = strtoupper(trim($_POST["cupom"] ?? ""));
 $subtotal = (float) ($_POST["subtotal"] ?? 0);

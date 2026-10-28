@@ -24,9 +24,14 @@ $sucesso = isset($_GET["sucesso"]);
     <div class="alert alert-error">Preencha e-mail e senha.</div>
 <?php elseif ($erro === "credenciais"): ?>
     <div class="alert alert-error">E-mail ou senha inválidos.</div>
+<?php elseif ($erro === "bloqueado"): ?>
+    <div class="alert alert-error">Conta temporariamente bloqueada devido a múltiplas tentativas inválidas. Tente novamente mais tarde.</div>
+<?php elseif ($erro === "rate_limit"): ?>
+    <div class="alert alert-error">Muitas tentativas de login. Tente novamente em alguns minutos.</div>
 <?php endif; ?>
 
 <form class="auth-form" action="<?= apiUrl("login.php") ?>" method="post">
+    <?= csrf_input() ?>
     <div class="form-group">
         <label class="form-label">E-mail</label>
         <input type="email" name="email" class="form-control" required>
@@ -40,6 +45,9 @@ $sucesso = isset($_GET["sucesso"]);
 
 <p style="margin-top:16px">
     Ainda não tem conta? <a href="<?= pageUrl("cadastro.php") ?>">Cadastre-se aqui</a>.
+</p>
+<p style="margin-top:8px">
+    <a href="<?= pageUrl("esqueci_senha.php") ?>">Esqueci minha senha</a>
 </p>
 
 <?php require __DIR__ . "/../includes/footer.php"; ?>

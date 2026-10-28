@@ -11,16 +11,25 @@ $email = trim($_POST["email"] ?? "");
 $password = $_POST["password"] ?? "";
 
 if ($email === "" || $password === "") {
-    header("Location: ../index.php?erro=campos");
+    header("Location: " . pageUrl("login.php") . "?erro=campos");
     exit;
 }
 
 $auth = new Auth();
 
-if ($auth->login($email, $password)) {
-    header("Location: " . pageUrl("loja.php"));
+// CSRF & rate-limit protections
+verify_csrf_from_request(true);
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+if (!rate_limit_check("login:{$ip}", 5, 60)) {
+    header("Location: " . pageUrl("login.php") . "?erro=rate_limit");
     exit;
 }
 
-header("Location: ../index.php?erro=credenciais");
+if ($auth->login($email, $password)) {
+    // Redirect based on role (admin -> admin dashboard, cliente -> loja)
+    $auth->redirectPosLogin();
+}
+
+$erro = $auth->getLastError() === "bloqueado" ? "bloqueado" : "credenciais";
+header("Location: " . pageUrl("login.php") . "?erro={$erro}");
 exit;

@@ -1,12 +1,6 @@
-/* ============================================================
-   ADMIN-PEDIDOS-PENDENTES.JS
-   Interage com os endpoints de aprovacao/recusa de pedidos.
-   - Server-side render ja monta a lista; este JS apenas anexa
-     os comportamentos dos botoes e atualiza a UI apos a acao.
-   ============================================================ */
-
 document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal-recusar");
+    const csrfToken = document.getElementById("csrf-token")?.value || "";
     const modalPedidoId = document.getElementById("modal-pedido-id");
     const motivoTextarea = document.getElementById("motivo-recusa");
     const motivoErro = document.getElementById("motivo-erro");
@@ -91,8 +85,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch(caminhoApi("aprovar_pedido.php"), {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pedido_id: parseInt(pedidoId, 10) }),
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: JSON.stringify({ pedido_id: parseInt(pedidoId, 10), csrf_token: csrfToken }),
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -160,10 +157,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         fetch(caminhoApi("recusar_pedido.php"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
+            },
             body: JSON.stringify({
                 pedido_id: parseInt(ctx.id, 10),
                 motivo: motivo,
+                csrf_token: csrfToken,
             }),
         })
             .then(function (r) { return r.json(); })
